@@ -1,0 +1,25 @@
+# --- unpublished data --------------------------------------------------------
+# The phase-velocity maps. Remove these lines when the data are public.
+vel0*
+merged.xyz
+merged_diag.txt
+merged_qc.png
+
+# Test fixtures are copies of that data, so they go too. Anyone cloning this
+# repository can regenerate them with:  python tests/make_fixtures.py
+# which falls back to a synthetic stand-in of the same geometry when the real
+# maps are absent, so the whole test suite still runs.
+tests/fixtures/
+tests/awk_reference.d
+
+# --- unpublished manuscript ---------------------------------------------------
+# Remove this line once the paper is submitted or posted as a preprint.
+paper/
+
+# --- generated output ---------------------------------------------------------
+tests/checkerboard/
+tests/resolution/
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db

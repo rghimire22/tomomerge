@@ -1,0 +1,1551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TomoMerge — merge overlapping seismic tomography models</title>
+<meta name="description" content="Free browser tool that merges two overlapping seismic tomography maps (phase velocity, group velocity or any lon/lat/value grid) with a Gaussian distance-weighted blend and an explicit criterion for the hand-over width. Runs entirely in your browser; files are never uploaded.">
+<meta name="keywords" content="seismic tomography, surface wave tomography, phase velocity, model merging, mosaicking, ambient noise, subarray, GMT, xyz grid, checkerboard resolution test">
+<meta name="author" content="Riwaj Ghimire, University of Houston">
+<link rel="canonical" href="https://your-username.github.io/tomomerge/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="TomoMerge — merge overlapping seismic tomography models">
+<meta property="og:description" content="Free browser tool that merges two overlapping seismic tomography maps (phase velocity, group velocity or any lon/lat/value grid) with a Gaussian distance-weighted blend and an explicit criterion for the hand-over width. Runs entirely in your browser; files are never uploaded.">
+<meta property="og:url" content="https://your-username.github.io/tomomerge/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="TomoMerge — merge overlapping seismic tomography models">
+<meta name="twitter:description" content="Free browser tool that merges two overlapping seismic tomography maps (phase velocity, group velocity or any lon/lat/value grid) with a Gaussian distance-weighted blend and an explicit criterion for the hand-over width. Runs entirely in your browser; files are never uploaded.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=&#39;http://www.w3.org/2000/svg&#39; viewBox=&#39;0 0 40 40&#39;%3E%3Crect x=&#39;2&#39; y=&#39;9&#39; width=&#39;21&#39; height=&#39;21&#39; rx=&#39;4&#39; fill=&#39;%232f6fd0&#39;/%3E%3Crect x=&#39;17&#39; y=&#39;9&#39; width=&#39;21&#39; height=&#39;21&#39; rx=&#39;4&#39; fill=&#39;%23d9730d&#39; opacity=&#39;.8&#39;/%3E%3C/svg%3E">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"SoftwareApplication",
+ "name":"TomoMerge","applicationCategory":"ScienceApplication",
+ "operatingSystem":"Any browser","url":"https://your-username.github.io/tomomerge/",
+ "description":"Free browser tool that merges two overlapping seismic tomography maps (phase velocity, group velocity or any lon/lat/value grid) with a Gaussian distance-weighted blend and an explicit criterion for the hand-over width. Runs entirely in your browser; files are never uploaded.",
+ "author":{"@type":"Person","name":"Riwaj Ghimire","affiliation":"University of Houston"},
+ "offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
+</script>
+<style>
+:root{
+  --bg:#f6f7f9; --card:#fff; --line:#e4e7ec; --line2:#d0d5dd;
+  --ink:#101828; --ink2:#475467; --ink3:#98a2b3;
+  --accent:#1c3f7c; --accent2:#2f6fd0; --tint:#eef4fd;
+  --ok:#067647; --okbg:#ecfdf3; --bad:#b42318; --badbg:#fef3f2;
+  --warn:#b54708; --warnbg:#fffaeb;
+  --mono:"SF Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.04);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);
+  font:14px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:1460px;margin:0 auto;padding:0 26px 72px}
+
+/* ---------- hero ---------- */
+header{background:radial-gradient(1200px 320px at 18% -40%,#2b5fa8 0%,transparent 60%),
+       linear-gradient(135deg,#0d1f3c 0%,#132f57 45%,#1b4079 100%);
+       color:#fff;margin-bottom:24px;position:relative;overflow:hidden}
+header:after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,.045) 0 1px,transparent 1px 46px)}
+.hin{max-width:1460px;margin:0 auto;padding:26px 26px 24px;
+     display:flex;align-items:flex-start;gap:30px;flex-wrap:wrap;position:relative;z-index:1}
+.brand{display:flex;align-items:center;gap:12px}
+.brand svg{flex:none;filter:drop-shadow(0 2px 6px rgba(0,0,0,.35))}
+h1{font-size:25px;margin:0;letter-spacing:-.025em;font-weight:700;line-height:1.1}
+h1 span{color:#8dc0ff;font-weight:350}
+.kicker{font:11px/1 ui-sans-serif,sans-serif;letter-spacing:.16em;text-transform:uppercase;
+        color:#8fb4e6;margin:0 0 5px}
+.tag{margin:11px 0 0;color:#c3d6ee;font-size:13.5px;max-width:60ch}
+.tag b{color:#fff;font-weight:600}
+.chips{display:flex;gap:9px;margin-left:auto;flex-wrap:wrap;align-self:center}
+.chip{border:1px solid rgba(255,255,255,.18);border-radius:9px;padding:6px 12px;
+      background:rgba(255,255,255,.07);min-width:100px;backdrop-filter:blur(3px)}
+.chip b{display:block;font:10.5px/1.3 ui-sans-serif,sans-serif;color:#9dbdea;
+        font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.chip span{font:14px/1.45 var(--mono);color:#fff}
+.chip.good span{color:#7ce2a4} .chip.bad span{color:#ffb4ab}
+.rail{height:3px;background:linear-gradient(90deg,#2f6fd0,#8dc0ff 40%,#d9730d 75%,#ffd08a)}
+
+/* ---------- footer ---------- */
+footer{border-top:1px solid var(--line);background:#fff;margin-top:34px}
+.fin{max-width:1460px;margin:0 auto;padding:22px 26px 30px;text-align:center}
+.fbrand{font-weight:700;letter-spacing:-.02em;color:var(--accent);font-size:15px}
+.fbrand i{font-style:normal;color:var(--ink3);font-weight:500;font-size:12px;
+          border:1px solid var(--line);border-radius:20px;padding:1px 8px;margin-left:7px}
+.credit{margin:9px 0 0;font-size:14px;color:var(--ink)}
+.credit strong{font-weight:650}
+.fine{margin:5px 0 0;font-size:12px;color:var(--ink3)}
+
+/* ---------- palette picker ---------- */
+.palbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.palpick{display:flex;align-items:center;gap:9px;border:1px solid var(--line2);
+         border-radius:8px;padding:5px 10px 5px 7px;background:#fff;cursor:pointer}
+.palpick:hover{border-color:var(--accent2)}
+.palpick .bar{width:104px;height:15px;border-radius:3px;border:1px solid rgba(0,0,0,.22)}
+.palpick .nm{font-size:13px;font-weight:550}
+.palpick .car{color:var(--ink3);font-size:11px}
+.palgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));
+         gap:12px 16px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.sw{cursor:pointer;border:1px solid transparent;border-radius:8px;padding:6px;transition:.12s}
+.sw:hover{background:#f7f9fc;border-color:var(--line)}
+.sw.on{background:var(--tint);border-color:var(--accent2)}
+.sw .bar{height:19px;border-radius:3px;border:1px solid rgba(0,0,0,.28)}
+.sw .tick{height:5px;margin:0 1px;
+  background:repeating-linear-gradient(to right,var(--ink3) 0 1px,transparent 1px 12.5%)}
+.sw .nm{font-size:11.5px;color:var(--ink2);text-align:center;margin-top:3px;
+        white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sw.on .nm{color:var(--accent);font-weight:600}
+.palnote{font-size:11.5px;color:var(--ink3);margin:12px 0 0;grid-column:1/-1}
+
+/* ---------- cards ---------- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;
+      box-shadow:var(--shadow);margin-bottom:18px;overflow:hidden}
+.card.off{opacity:.5;pointer-events:none}
+.chead{display:flex;align-items:center;gap:11px;padding:13px 18px;border-bottom:1px solid var(--line)}
+.step{width:21px;height:21px;border-radius:50%;background:var(--accent);color:#fff;
+      font:11.5px/21px ui-sans-serif,sans-serif;font-weight:700;text-align:center;flex:none}
+.chead h2{font-size:14px;margin:0;font-weight:620;letter-spacing:-.005em}
+.chead .hint{color:var(--ink3);font-size:12.5px;margin-left:auto;text-align:right}
+.cbody{padding:16px 18px}
+
+/* ---------- drop slots ---------- */
+.slots{display:flex;align-items:stretch;gap:12px}
+.slot{flex:1;border:1.5px dashed var(--line2);border-radius:10px;padding:15px 16px;
+      cursor:pointer;background:#fcfcfd;transition:.13s;min-height:118px}
+.slot:hover{border-color:var(--accent2);background:var(--tint)}
+.slot.hot{border-color:var(--accent2);background:var(--tint);border-style:solid}
+.slot.set{border-style:solid;border-color:var(--line);background:#fff;cursor:default}
+.slot h3{margin:0;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--accent)}
+.slot .role{font-size:11px;color:var(--ink3);letter-spacing:.04em;text-transform:uppercase}
+.slot .fn{margin:5px 0 0;font-size:13px;color:var(--ink2);word-break:break-all}
+.slot.set .fn{color:var(--ink);font-weight:560}
+.slot table{margin:8px 0 0;border-collapse:collapse;font:12px/1.6 var(--mono);color:var(--ink2)}
+.slot td:first-child{color:var(--ink3);padding-right:12px}
+.slot .x{float:right;color:var(--ink3);font-size:16px;line-height:1;padding:0 3px;cursor:pointer}
+.slot .x:hover{color:var(--bad)}
+.swapbtn{align-self:center;border:1px solid var(--line);background:#fff;border-radius:9px;
+         width:36px;height:36px;font-size:15px;color:var(--ink2);cursor:pointer;flex:none}
+.swapbtn:hover{border-color:var(--accent2);color:var(--accent2)}
+
+/* ---------- controls ---------- */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(268px,1fr));gap:16px 26px}
+.f{display:flex;flex-direction:column;gap:5px}
+.f>label{font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink3);font-weight:600}
+.pair{display:flex;gap:7px;align-items:center}
+input[type=number],input[type=text]{border:1px solid var(--line2);border-radius:7px;padding:6px 9px;
+  font:13px var(--mono);width:100%;background:#fff;color:var(--ink)}
+input:focus{outline:2px solid var(--tint);border-color:var(--accent2)}
+.pair small{color:var(--ink3);font-size:11px;width:22px;flex:none}
+select{border:1px solid var(--line2);border-radius:7px;padding:6px 9px;background:#fff;font-size:13px}
+button{border:1px solid var(--line2);border-radius:7px;background:#fff;padding:6px 12px;
+       font-size:13px;cursor:pointer;color:var(--ink);font-weight:520}
+button:hover:not(:disabled){border-color:var(--accent2);color:var(--accent2)}
+button:disabled{opacity:.4;cursor:default}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.primary:hover:not(:disabled){background:#16345f;color:#fff}
+input[type=range]{width:100%;accent-color:var(--accent2);margin:0}
+.meter{height:5px;border-radius:3px;background:var(--badbg);position:relative;overflow:hidden;margin-top:-2px}
+.meter i{position:absolute;top:0;bottom:0;left:0;background:#abefc6;display:block}
+.meter u{position:absolute;top:0;bottom:0;width:2px;background:var(--accent);margin-left:-1px}
+.mlab{display:flex;justify-content:space-between;font:10.5px var(--mono);color:var(--ink3)}
+.verdict{border-radius:8px;padding:9px 12px;font-size:13px;margin:14px 0 0;border:1px solid transparent}
+.verdict.ok{background:var(--okbg);color:var(--ok);border-color:#abefc6}
+.verdict.bad{background:var(--badbg);color:var(--bad);border-color:#fecdca}
+.verdict.warn{background:var(--warnbg);color:var(--warn);border-color:#fedf89}
+.kv{font:12.5px/1.75 var(--mono);color:var(--ink2);margin:12px 0 0}
+.kv b{color:var(--ink);font-weight:600}
+details{margin-top:14px;border-top:1px solid var(--line);padding-top:11px}
+summary{cursor:pointer;font-size:12.5px;color:var(--ink2);user-select:none}
+summary:hover{color:var(--accent2)}
+canvas{display:block;max-width:100%}
+#kernel{width:100%;height:172px;margin-top:14px}
+#qc{width:100%;border:1px solid var(--line);border-radius:9px;background:#fff}
+.bar{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}
+.bar .f{min-width:0}
+.bar .f.w{width:104px} .bar .f.wide{width:190px} .bar .f.grow{flex:1;min-width:180px}
+.dl{display:flex;gap:9px;margin-top:14px;flex-wrap:wrap}
+#log{background:#0b1220;color:#cdd7e6;border-radius:9px;padding:12px 14px;margin:10px 0 0;
+     font:12px/1.65 var(--mono);white-space:pre-wrap;max-height:230px;overflow:auto}
+#log .e{color:#fda29b} #log .g{color:#75e0a7} #log .d{color:#7d8ca3}
+.empty{color:var(--ink3);font-size:13px;text-align:center;padding:26px 0}
+.hidden{display:none}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hin">
+    <div>
+      <div class="brand">
+        <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true">
+          <defs>
+            <linearGradient id="lgA" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#8dc0ff"/><stop offset="1" stop-color="#2f6fd0"/>
+            </linearGradient>
+            <linearGradient id="lgB" x1="1" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#ffd08a"/><stop offset="1" stop-color="#d9730d"/>
+            </linearGradient>
+          </defs>
+          <rect x="2.5" y="9" width="21" height="21" rx="4.5" fill="url(#lgA)" opacity=".95"/>
+          <rect x="16.5" y="9" width="21" height="21" rx="4.5" fill="url(#lgB)" opacity=".8"/>
+          <rect x="16.5" y="9" width="7" height="21" fill="#fff" opacity=".42"/>
+        </svg>
+        <div>
+          <p class="kicker">Seismic tomography toolkit</p>
+          <h1>Tomo<span>Merge</span></h1>
+        </div>
+      </div>
+      <p class="tag">Blend two overlapping inversions into one map. Shared nodes become a
+        Gaussian distance-weighted average that trusts whichever array centre is nearer;
+        nodes only one map has pass through untouched. <b>Drop two files and the answer
+        is already on screen.</b></p>
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+  <div class="rail"></div>
+</header>
+
+<div class="wrap">
+
+<section class="card" id="cardLoad">
+  <div class="chead"><span class="step">1</span><h2>Load maps</h2>
+    <span class="hint">plain text, three columns: longitude&nbsp;&nbsp;latitude&nbsp;&nbsp;value</span></div>
+  <div class="cbody">
+    <div class="slots">
+      <div class="slot" id="slotA">
+        <h3>Map A <span class="role" id="roleA"></span></h3>
+        <p class="fn" id="fnA">drop a file here, or click to browse</p>
+        <div id="stA"></div>
+      </div>
+      <button class="swapbtn" id="swap" title="swap the two maps">⇄</button>
+      <div class="slot" id="slotB">
+        <h3>Map B <span class="role" id="roleB"></span></h3>
+        <p class="fn" id="fnB">drop a file here, or click to browse</p>
+        <div id="stB"></div>
+      </div>
+    </div>
+    <p class="verdict warn hidden" id="loadNote"></p>
+  </div>
+</section>
+
+<section class="card off" id="cardTune">
+  <div class="chead"><span class="step">2</span><h2>Blend</h2>
+    <span class="hint" id="axisHint"></span></div>
+  <div class="cbody">
+    <div class="grid">
+      <div class="f">
+        <label>Map A centre</label>
+        <div class="pair"><small>lon</small><input type="number" id="ax" step="0.1">
+                          <small>lat</small><input type="number" id="ay" step="0.1"></div>
+      </div>
+      <div class="f">
+        <label>Map B centre</label>
+        <div class="pair"><small>lon</small><input type="number" id="bx" step="0.1">
+                          <small>lat</small><input type="number" id="by" step="0.1"></div>
+      </div>
+      <div class="f">
+        <label>Smoothing length&nbsp;L (deg)</label>
+        <div class="pair"><input type="number" id="Lbox" step="0.01" min="0.001" style="width:96px">
+          <button id="rec" style="white-space:nowrap">Recommend</button></div>
+      </div>
+      <div class="f" style="grid-column:1/-1">
+        <input type="range" id="Lslide" min="0.05" max="10" step="0.01" value="1">
+        <div class="meter" id="meter"><i></i><u></u></div>
+        <div class="mlab"><span id="mlo"></span><span id="mmid"></span><span id="mhi"></span></div>
+      </div>
+    </div>
+
+    <p class="verdict" id="verdict"></p>
+    <p class="kv" id="kv"></p>
+    <canvas id="kernel" width="1400" height="344"></canvas>
+
+    <details id="adv">
+      <summary>Advanced</summary>
+      <div class="grid" style="margin-top:12px">
+        <div class="f">
+          <label>Node match tolerance (deg)</label>
+          <div class="pair"><input type="number" id="tol" step="0.0001" min="0.0000001" value="0.0001">
+            <button id="tolAuto" style="white-space:nowrap">Suggest</button></div>
+        </div>
+        <div class="f">
+          <label>Edge purity target</label>
+          <div class="pair"><input type="number" id="edgeTol" step="0.01" min="0.001" max="0.49" value="0.10">
+            <small style="width:auto">→ each overlap edge stays this close to a single map</small></div>
+        </div>
+      </div>
+    </details>
+  </div>
+</section>
+
+<section class="card off" id="cardResult">
+  <div class="chead"><span class="step">3</span><h2>Result</h2>
+    <span class="hint" id="resHint"></span></div>
+  <div class="cbody">
+    <div class="bar">
+      <div class="f w"><label>colour min</label><input type="number" id="vmin" step="0.01"></div>
+      <div class="f w"><label>colour max</label><input type="number" id="vmax" step="0.01"></div>
+      <div class="f"><label>&nbsp;</label><button id="autoScale">Auto</button></div>
+      <div class="f grow"><label>profile offset from centre line (deg)</label>
+        <input type="range" id="poff" min="-5" max="5" step="0.05" value="0"></div>
+      <div class="f"><label>&nbsp;</label><button class="primary" id="go">Merge</button></div>
+    </div>
+
+    <div class="palbar">
+      <label style="font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;
+                    color:var(--ink3);font-weight:600">colour palette</label>
+      <div class="palpick" id="palPick" title="choose a palette">
+        <span class="bar" id="palBar"></span>
+        <span class="nm" id="palName">jet</span>
+        <span class="car">▾</span>
+      </div>
+      <label style="font-size:13px"><input type="checkbox" id="palRev" checked> reverse</label>
+      <button id="cptBtn" title="load a GMT .cpt file for exact colours">Load .cpt…</button>
+      <select id="cmap" class="hidden"></select>
+    </div>
+    <div class="palgrid hidden" id="palGrid"></div>
+    <canvas id="qc" width="1440" height="1010" style="margin-top:14px"></canvas>
+    <div class="dl">
+      <button id="dlXYZ" disabled>Download merged.xyz</button>
+      <button id="dlDiag" disabled>Download weights (_diag.txt)</button>
+      <button id="dlPNG" disabled>Download QC figure</button>
+    </div>
+  </div>
+</section>
+
+<details open><summary style="font-size:12.5px">Console</summary><pre id="log">ready — drop two .xyz files above.</pre></details>
+</div>
+
+<footer>
+  <div class="fin">
+    <div class="fbrand">TomoMerge </div>
+    <p class="credit">Developed by <strong>Riwaj Ghimire</strong>, University of Houston</p>
+    <p class="fine"><a href="mailto:riewazghimire@gmail.com">riewazghimire@gmail.com</a>
+  </div>
+</footer>
+
+<input type="file" id="filePick" multiple class="hidden">
+<input type="file" id="cptPick" accept=".cpt,.txt,*" class="hidden">
+
+<!-- =================================================================== -->
+<!-- CORE — pure numerics, no DOM. Mirrors merge_tomo.py exactly.        -->
+<!-- =================================================================== -->
+<script id="core">
+const KEY_DECIMALS = 4;
+let EDGE_TOL = 0.10;                       // overlap-edge purity target
+let MATCH_SNAP = Math.pow(10, -KEY_DECIMALS);   // nodes nearer than this are one
+function setEdgeTol(p){ EDGE_TOL = p; }
+function setMatchTol(d){ if (!(d > 0)) throw new Error('match tolerance must be > 0'); MATCH_SNAP = d; }
+
+/* Read a lon/lat/value file; blank lines and # or > comments are skipped.
+   Fortran D exponents (1.5D-3) are accepted - some inversion codes emit them. */
+function parseXYZ(text, name){
+  const lon = [], lat = [], vel = [];
+  const lines = text.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++){
+    const s = lines[i].trim();
+    if (!s || s[0] === '#' || s[0] === '>' || s[0] === '%') continue;
+    const p = s.split(/[\s,;]+/);
+    if (p.length < 3) throw new Error(`${name}, line ${i+1}: expected 3 columns, got ${p.length}`);
+    const a = +p[0].replace(/[dD]/, 'e'), b = +p[1].replace(/[dD]/, 'e'),
+          c = +p[2].replace(/[dD]/, 'e');
+    if (!isFinite(a) || !isFinite(b) || !isFinite(c))
+      throw new Error(`${name}, line ${i+1}: non-numeric or non-finite value → "${s}"`);
+    lon.push(a); lat.push(b); vel.push(c);
+  }
+  if (!lon.length) throw new Error(`${name}: no data rows found`);
+  return {lon:Float64Array.from(lon), lat:Float64Array.from(lat),
+          vel:Float64Array.from(vel), name};
+}
+
+/* Indices of the first occurrence of each exactly repeated coordinate. */
+function dedupe(d){
+  const seen = new Set(), keep = [];
+  for (let i=0;i<d.lon.length;i++){
+    const k = d.lon[i] + ',' + d.lat[i];
+    if (!seen.has(k)){ seen.add(k); keep.push(i); }
+  }
+  return keep;
+}
+
+/* For each node of A, the index of the nearest node of B within `tol`, or -1.
+   Ties go to the lower index, so the result is deterministic.
+
+   A hash grid of cell size `tol` with a 3×3 neighbour scan.  Snapping both maps
+   onto a common grid and comparing buckets — the obvious shortcut — silently
+   loses any pair that straddles a bucket boundary, punching scattered holes in
+   the overlap that no diagnostic would catch.  A true radius cannot do that. */
+function matchNodes(lonA, latA, iA, lonB, latB, iB, tol){
+  tol = tol === undefined ? MATCH_SNAP : tol;
+  const cell = new Map();
+  for (const j of iB){
+    const k = Math.floor(lonB[j]/tol) + ',' + Math.floor(latB[j]/tol);
+    if (!cell.has(k)) cell.set(k, []);
+    cell.get(k).push(j);
+  }
+  const t2 = tol*tol, out = new Int32Array(iA.length).fill(-1);
+  for (let a=0;a<iA.length;a++){
+    const i = iA[a], x = lonA[i], y = latA[i];
+    const cx = Math.floor(x/tol), cy = Math.floor(y/tol);
+    let best = -1, bd = Infinity;
+    for (let dx=-1;dx<=1;dx++) for (let dy=-1;dy<=1;dy++){
+      const list = cell.get((cx+dx) + ',' + (cy+dy));
+      if (!list) continue;
+      for (const j of list){
+        const d = (lonB[j]-x)*(lonB[j]-x) + (latB[j]-y)*(latB[j]-y);
+        if (d < bd || (d === bd && (best < 0 || j < best))){ bd = d; best = j; }
+      }
+    }
+    out[a] = bd <= t2 ? best : -1;
+  }
+  return out;
+}
+
+/* Median distance from a node to its nearest neighbour in the SAME file, i.e.
+   the real node pitch.  Robust to jitter, ragged edges and anisotropic grids,
+   unlike counting distinct printed coordinates. */
+function nodePitch(d){
+  const n = d.lon.length;
+  if (n < 2) return 1;
+  const w = maxOf(d.lon) - minOf(d.lon), h = maxOf(d.lat) - minOf(d.lat);
+  let guess = (w > 0 && h > 0) ? Math.sqrt(w*h/n) : Math.max(w, h)/(n - 1);
+  if (!(guess > 0)) return 1;
+  for (let attempt = 0; attempt < 5; attempt++){
+    const cs = guess*1.5*Math.pow(2, attempt);
+    const cell = new Map();
+    for (let j=0;j<n;j++){
+      const k = Math.floor(d.lon[j]/cs) + ',' + Math.floor(d.lat[j]/cs);
+      if (!cell.has(k)) cell.set(k, []);
+      cell.get(k).push(j);
+    }
+    const stride = Math.max(1, Math.floor(n/2000)), got = [];
+    for (let i=0;i<n;i+=stride){
+      const x = d.lon[i], y = d.lat[i];
+      const cx = Math.floor(x/cs), cy = Math.floor(y/cs);
+      let bd = Infinity;
+      for (let dx=-1;dx<=1;dx++) for (let dy=-1;dy<=1;dy++){
+        const list = cell.get((cx+dx) + ',' + (cy+dy));
+        if (!list) continue;
+        for (const j of list){
+          if (j === i) continue;
+          const dd = (d.lon[j]-x)*(d.lon[j]-x) + (d.lat[j]-y)*(d.lat[j]-y);
+          if (dd < bd) bd = dd;
+        }
+      }
+      if (isFinite(bd)) got.push(Math.sqrt(bd));
+    }
+    if (got.length > 0.5*Math.ceil(n/stride)){
+      got.sort((a,b)=>a-b);
+      return got[got.length >> 1];
+    }
+  }
+  return guess;
+}
+
+/* How well the two grids actually line up, independent of the tolerance.
+
+   For a sample of A nodes, the distance to the nearest node of B.  Nodes whose
+   nearest neighbour is within half a node spacing are "coincident" — the same
+   point printed twice — and `gapMax` is how far apart the worst of those pairs
+   is.  That is the number the matching tolerance has to clear.
+
+   Comparing the coincident fraction with the number that actually matched
+   catches the nastiest failure of all: a PARTIAL match, where most of the
+   overlap blends and the rest quietly does not, leaving scattered holes that
+   look like real structure on the map. */
+function alignment(A, B){
+  // nodePitch, not spacing(): spacing() reads the gaps between distinct printed
+  // coordinates, which collapses to the snap size the moment coordinates carry
+  // any jitter.  The pitch is a real nearest-neighbour distance and survives it.
+  const pA = nodePitch(A), pB = nodePitch(B);
+  const step = Math.min(pA, pB);
+  const cellSize = Math.max(pA, pB, 1e-9);
+  const cell = new Map();
+  for (let j=0;j<B.lon.length;j++){
+    const k = Math.floor(B.lon[j]/cellSize) + ',' + Math.floor(B.lat[j]/cellSize);
+    if (!cell.has(k)) cell.set(k, []);
+    cell.get(k).push(j);
+  }
+  const stride = Math.max(1, Math.floor(A.lon.length/20000));
+  const gaps = [];
+  let sampled = 0, close = 0, gapMax = 0;
+  for (let i=0;i<A.lon.length;i+=stride){
+    sampled++;
+    const x = A.lon[i], y = A.lat[i];
+    const cx = Math.floor(x/cellSize), cy = Math.floor(y/cellSize);
+    let bd = Infinity;
+    for (let dx=-1;dx<=1;dx++) for (let dy=-1;dy<=1;dy++){
+      const list = cell.get((cx+dx) + ',' + (cy+dy));
+      if (!list) continue;
+      for (const j of list){
+        const d = (B.lon[j]-x)*(B.lon[j]-x) + (B.lat[j]-y)*(B.lat[j]-y);
+        if (d < bd) bd = d;
+      }
+    }
+    if (!isFinite(bd)) continue;
+    const g = Math.sqrt(bd);
+    gaps.push(g);
+    if (g < 0.5*step){ close++; if (g > gapMax) gapMax = g; }
+  }
+  if (!gaps.length) return {gapMedian:null, gapMax:0, fClose:0, step, sampled};
+  gaps.sort((a,b)=>a-b);
+  return {gapMedian:gaps[gaps.length >> 1], gapMax,
+          fClose:sampled ? close/sampled : 0, step, sampled};
+}
+function nearestGap(A, B){ return alignment(A, B).gapMedian; }
+
+/* A centre is either a bare longitude or an [lon, lat] pair. */
+function centrePt(c){ return (typeof c === 'number') ? [c, 0] : [+c[0], +c[1]]; }
+
+/* Signed distance from the midpoint of the two centres along the line joining
+   them (positive towards cB), plus the separation D and the unit vector.
+
+   This is the only geometry the blend needs.  A difference of two squared
+   distances is linear in position:  d_B² − d_A² = 2·D·t,  so
+   log(w_A/w_B) = 2·D·t/L² and the weight is an EXACT logistic in t for any
+   orientation — east-west, north-south or diagonal.  With both centres on the
+   same latitude, t is just (lon − midpoint longitude) and everything reduces
+   bit-for-bit to the longitude-only formula.                                */
+function frame(cA, cB){
+  const [ax, ay] = centrePt(cA), [bx, by] = centrePt(cB);
+  const dx = bx - ax, dy = by - ay, D = Math.hypot(dx, dy);
+  if (D === 0) return {D:0, ux:1, uy:0, mx:0.5*(ax+bx), my:0.5*(ay+by)};
+  return {D, ux:dx/D, uy:dy/D, mx:0.5*(ax+bx), my:0.5*(ay+by)};
+}
+function project(lon, lat, cA, cB){
+  const f = frame(cA, cB);
+  return {t:(lon - f.mx)*f.ux + (lat - f.my)*f.uy, D:f.D};
+}
+function perpendicular(lon, lat, cA, cB){
+  const f = frame(cA, cB);
+  return -(lon - f.mx)*f.uy + (lat - f.my)*f.ux;
+}
+
+/* logistic, written so only exp of a non-positive number is ever taken:
+   cannot overflow however small L is. */
+function logistic(z){ const e = Math.exp(-Math.abs(z)); return z >= 0 ? e/(1+e) : 1/(1+e); }
+
+function blendWeight(lon, lat, L, cA, cB){
+  const f = frame(cA, cB);
+  if (f.D === 0) return 0.5;
+  const t = (lon - f.mx)*f.ux + (lat - f.my)*f.uy;
+  return logistic(t/(L*L/(2*f.D)));
+}
+/* longitude-only form, for the plain east/west case */
+function westWeight(lon, L, cW, cE){ return blendWeight(lon, 0, L, cW, cE); }
+
+function handoverScale(L, cA, cB){
+  const D = frame(cA, cB).D;
+  return D === 0 ? Infinity : L*L/(2*D);
+}
+
+/* Largest L keeping w_A ≥ 1−p at the near overlap edge and ≤ p at the far one:
+      s ≤ min(−t_lo, t_hi)/ln((1−p)/p),   L = √(2·D·s)
+   null means the midpoint between the centres lies outside the overlap, so no
+   L keeps both edges clean and the centres need revisiting.                 */
+function suggestLProj(cA, cB, tLo, tHi, p){
+  p = p === undefined ? EDGE_TOL : p;
+  const D = frame(cA, cB).D;
+  if (D === 0 || !(tHi > tLo)) return null;
+  const half = Math.min(-tLo, tHi);
+  if (half <= 0) return null;
+  return Math.sqrt(2*D*half/Math.log((1 - p)/p));
+}
+function suggestL(cW, cE, ovLo, ovHi, p){        // longitude-interval form
+  const m = 0.5*(centrePt(cW)[0] + centrePt(cE)[0]);
+  return suggestLProj(cW, cE, ovLo - m, ovHi - m, p);
+}
+
+function minOf(a){ let m = Infinity; for (let i=0;i<a.length;i++) if (a[i]<m) m=a[i]; return m; }
+function maxOf(a){ let m = -Infinity; for (let i=0;i<a.length;i++) if (a[i]>m) m=a[i]; return m; }
+function overlapSpan(w, e){
+  return [Math.max(minOf(w.lon), minOf(e.lon)), Math.min(maxOf(w.lon), maxOf(e.lon))];
+}
+
+/* Projected extent of the nodes the two maps actually share.  Measuring the
+   overlap from matching nodes rather than from where the bounding boxes cross
+   is what keeps the recommended L honest for ragged coverage. */
+function overlapProjection(A, B, cA, cB, tol){
+  const iA = dedupe(A), iB = dedupe(B);
+  const pair = matchNodes(A.lon, A.lat, iA, B.lon, B.lat, iB, tol);
+  const f = frame(cA, cB);
+  let lo = Infinity, hi = -Infinity, n = 0;
+  for (let a=0;a<iA.length;a++){
+    if (pair[a] < 0) continue;
+    const i = iA[a];
+    const t = (A.lon[i] - f.mx)*f.ux + (A.lat[i] - f.my)*f.uy;
+    if (t < lo) lo = t; if (t > hi) hi = t; n++;
+  }
+  return n ? {tLo:lo, tHi:hi, n} : {tLo:null, tHi:null, n:0};
+}
+
+function edgeQuality(L, cA, cB, tLo, tHi){
+  if (tLo === null || !(tHi > tLo) || frame(cA, cB).D === 0) return {verdict:'none'};
+  const s = handoverScale(L, cA, cB);
+  const wA = logistic(tLo/s), wB = 1 - logistic(tHi/s);
+  return {wA, wB, verdict: Math.max(1 - wA, 1 - wB) <= EDGE_TOL + 1e-6 ? 'ok' : 'loose'};
+}
+
+/* Map A nodes in file order, then B-only nodes.  src: 'W' | 'E' | 'B'
+   ('W'/'E' kept for compatibility: A-only / B-only). */
+function gaussianMerge(A, B, L, cA, cB){
+  if (!(L > 0)) throw new Error('smoothing length L must be greater than zero');
+  const iA = dedupe(A), iB = dedupe(B);
+  const dupW = A.lon.length - iA.length, dupE = B.lon.length - iB.length;
+  const pair = matchNodes(A.lon, A.lat, iA, B.lon, B.lat, iB);
+  const claimed = new Set();
+  for (let a=0;a<pair.length;a++) if (pair[a] >= 0) claimed.add(pair[a]);
+
+  const f = frame(cA, cB), s = L*L/(2*f.D);
+  const lon = [], lat = [], vel = [], wW = [], src = [];
+  for (let a=0;a<iA.length;a++){
+    const i = iA[a], lo = A.lon[i], la = A.lat[i], j = pair[a];
+    let v, w, t;
+    if (j >= 0){
+      if (f.D === 0) w = 0.5;
+      else { t = (lo - f.mx)*f.ux + (la - f.my)*f.uy; w = logistic(t/s); }
+      v = w*A.vel[i] + (1 - w)*B.vel[j]; t = 'B';
+    } else { v = A.vel[i]; w = 1; t = 'W'; }
+    lon.push(lo); lat.push(la); vel.push(v); wW.push(w); src.push(t);
+  }
+  for (const j of iB){
+    if (claimed.has(j)) continue;
+    lon.push(B.lon[j]); lat.push(B.lat[j]); vel.push(B.vel[j]);
+    wW.push(0); src.push('E');
+  }
+  return {lon:Float64Array.from(lon), lat:Float64Array.from(lat),
+          vel:Float64Array.from(vel), wW:Float64Array.from(wW),
+          src, dupW, dupE, pair, iA};
+}
+
+/* B-minus-A at every blended node, in output order. */
+function overlapDiff(A, B, m){
+  const idx = [], diff = [];
+  for (let a=0;a<m.iA.length;a++){
+    if (m.src[a] !== 'B') continue;
+    idx.push(a); diff.push(B.vel[m.pair[a]] - A.vel[m.iA[a]]);
+  }
+  return {idx, diff:Float64Array.from(diff)};
+}
+
+/* The step left where the overlap ends.  Beyond the near edge only map A
+   exists, while the merged value there is w·vA + (1−w)·vB, so the offset is
+   (1−w)·(vB−vA).  Mirror image at the far edge.  This is the visible seam. */
+function seamReport(m, od, cA, cB){
+  if (!od.idx.length) return null;
+  const f = frame(cA, cB);
+  const proj = i => (m.lon[i] - f.mx)*f.ux + (m.lat[i] - f.my)*f.uy;
+  let lo = Infinity, hi = -Infinity;
+  for (const i of od.idx){ const t = proj(i); if (t < lo) lo = t; if (t > hi) hi = t; }
+  // Half a node spacing: on an east-west axis that picks out exactly the edge
+  // column, and on a tilted axis it still picks out a proper edge band rather
+  // than the single node that happens to project furthest.
+  const tol = 0.5*Math.max(spacing(m.lon), spacing(m.lat));
+  const sw = [], se = [], ww = [], we = [];
+  od.idx.forEach((i, j) => {
+    const t = proj(i);
+    if (Math.abs(t - lo) < tol){ sw.push((1 - m.wW[i])*od.diff[j]); ww.push(m.wW[i]); }
+    if (Math.abs(t - hi) < tol){ se.push(m.wW[i]*(-od.diff[j]));    we.push(1 - m.wW[i]); }
+  });
+  const rms = a => a.length ? Math.sqrt(a.reduce((s,v)=>s+v*v,0)/a.length) : 0;
+  const amax = a => a.reduce((s,v)=>Math.max(s,Math.abs(v)),0);
+  const mean = a => a.length ? a.reduce((s,v)=>s+v,0)/a.length : 0;
+  return {loEdge:lo, hiEdge:hi, wWest:mean(ww), wEast:mean(we),
+          rmsW:rms(sw), maxW:amax(sw), rmsE:rms(se), maxE:amax(se), tol};
+}
+
+function stats(a){
+  if (!a.length) return {mean:0, rms:0, min:0, max:0};
+  let s = 0, mn = Infinity, mx = -Infinity, ss = 0;
+  for (let i=0;i<a.length;i++){ s += a[i]; ss += a[i]*a[i];
+    if (a[i]<mn) mn=a[i]; if (a[i]>mx) mx=a[i]; }
+  return {mean:s/a.length, rms:Math.sqrt(ss/a.length), min:mn, max:mx};
+}
+
+/* Byte-for-byte the layout merge_tomo.py writes:
+   f"{x:12.6f} {y:12.7f} {v:14.8f}\n"                                        */
+function fmt(v, width, dec){
+  const s = Object.is(v, -0) ? '-' + (0).toFixed(dec) : v.toFixed(dec);
+  return s.length >= width ? s : ' '.repeat(width - s.length) + s;
+}
+function formatXYZ(m){
+  const out = new Array(m.lon.length);
+  for (let i=0;i<m.lon.length;i++)
+    out[i] = fmt(m.lon[i],12,6) + ' ' + fmt(m.lat[i],12,7) + ' ' + fmt(m.vel[i],14,8);
+  return out.join('\n') + '\n';
+}
+function formatDiag(m){
+  const out = ['# lon lat vel w_A source(A/B/blend)'];
+  for (let i=0;i<m.lon.length;i++)
+    out.push(fmt(m.lon[i],12,6) + ' ' + fmt(m.lat[i],12,7) + ' ' + fmt(m.vel[i],14,8) +
+             ' ' + fmt(m.wW[i],9,6) + ' ' + (m.src[i] === 'W' ? 'A' : m.src[i] === 'E' ? 'B' : 'blend'));
+  return out.join('\n') + '\n';
+}
+
+/* median positive spacing of a coordinate axis */
+function spacing(arr){
+  const u = Array.from(new Set(Array.from(arr, v => Math.round(v/MATCH_SNAP)))).sort((a,b)=>a-b);
+  if (u.length < 2) return 1;
+  const d = [];
+  for (let i=1;i<u.length;i++) d.push(u[i] - u[i-1]);
+  d.sort((a,b)=>a-b);
+  return d[d.length >> 1]*MATCH_SNAP;
+}
+
+if (typeof module !== 'undefined') module.exports = {
+  parseXYZ, dedupe, matchNodes, nearestGap, alignment, nodePitch,
+  westWeight, blendWeight,
+  project, perpendicular, frame, handoverScale, suggestL, suggestLProj,
+  overlapSpan, overlapProjection, edgeQuality, gaussianMerge, overlapDiff,
+  seamReport, formatXYZ, formatDiag, fmt, spacing, stats, minOf, maxOf,
+  setMatchTol, setEdgeTol
+};
+</script>
+
+<!-- =================================================================== -->
+<!-- VIEW — drawing and wiring                                           -->
+<!-- =================================================================== -->
+<script>
+/* ------------------------------------------------------- colour ramps */
+const cl = x => Math.max(0, Math.min(1, x));
+function jet(t){
+  return [cl(1.5-Math.abs(4*t-3))*255, cl(1.5-Math.abs(4*t-2))*255, cl(1.5-Math.abs(4*t-1))*255];
+}
+function ramp(tbl, t){
+  t = cl(t)*(tbl.length - 1);
+  const i = Math.min(Math.floor(t), tbl.length - 2), f = t - i, a = tbl[i], b = tbl[i+1];
+  return [a[0]+(b[0]-a[0])*f, a[1]+(b[1]-a[1])*f, a[2]+(b[2]-a[2])*f];
+}
+const VIRIDIS=[[68,1,84],[72,40,120],[62,74,137],[49,104,142],[38,130,142],[31,158,137],
+               [53,183,121],[109,205,89],[180,222,44],[253,231,37]];
+const RDBU_R =[[5,48,97],[33,102,172],[67,147,195],[146,197,222],[209,229,240],[247,247,247],
+               [253,219,199],[244,165,130],[214,96,77],[178,24,43],[103,0,31]];
+const COOLWARM_R=[[180,4,38],[222,96,77],[244,165,130],[253,219,199],[247,247,247],
+                  [209,229,240],[146,197,222],[67,147,195],[33,102,172]];
+const rgb = c => `rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
+function hsv2rgb(h, s, v){
+  h = ((h % 360) + 360) % 360;
+  const c = v*s, x = c*(1 - Math.abs((h/60) % 2 - 1)), m = v - c;
+  let r, g, b;
+  if (h < 60){ r=c; g=x; b=0; } else if (h < 120){ r=x; g=c; b=0; }
+  else if (h < 180){ r=0; g=c; b=x; } else if (h < 240){ r=0; g=x; b=c; }
+  else if (h < 300){ r=x; g=0; b=c; } else { r=c; g=0; b=x; }
+  return [(r+m)*255, (g+m)*255, (b+m)*255];
+}
+
+/* --- palettes -----------------------------------------------------------
+   Every palette is a list of [position, r, g, b] anchors, so the built-ins and
+   a loaded .cpt file go down one code path.
+
+   The GMT-style entries are REPRODUCTIONS — close enough to choose a look, not
+   guaranteed identical to GMT's master .cpt files.  When the colours have to be
+   exactly GMT's (matching a figure already in a paper), use "Load .cpt…": the
+   real file is parsed and used verbatim.                                    */
+function sampleFn(fn, n){
+  return Array.from({length:n}, (_, i) => { const t = i/(n-1), c = fn(t);
+                                            return [t, c[0], c[1], c[2]]; });
+}
+function even(list){ return list.map((c, i) => [i/(list.length-1), c[0], c[1], c[2]]); }
+const PALETTES = {
+  rainbow:  sampleFn(t => hsv2rgb(300*(1-t), 1, 1), 31),
+  relief:   even([[0,0,0],[16,46,36],[70,120,86],[150,190,120],[214,220,155],
+                  [221,190,126],[205,205,205],[238,238,238],[255,255,255]]),
+  gray:     even([[0,0,0],[255,255,255]]),
+  no_green: even([[0,0,175],[0,90,255],[0,190,255],[130,235,255],[236,255,255],
+                  [255,255,80],[255,170,0],[230,60,0],[150,0,0]]),
+  red2green:even([[190,0,0],[255,100,100],[255,200,200],[255,255,255],
+                  [200,255,200],[100,220,100],[0,150,0]]),
+  seis:     even([[170,0,0],[255,90,0],[255,180,0],[255,255,0],[120,220,60],
+                  [0,190,120],[0,150,200],[0,0,180]]),
+  jet:      sampleFn(jet, 25),
+  ocean:    even([[0,0,0],[0,25,70],[0,70,130],[35,130,185],[120,190,220],
+                  [200,230,245],[255,255,255]]),
+  sealand:  even([[75,40,125],[40,80,200],[70,150,225],[150,205,235],[240,248,252],
+                  [215,185,140],[230,205,175],[245,225,230],[255,255,255]]),
+  polar:    even([[0,0,255],[255,255,255],[255,0,0]]),
+  haxby:    even([[37,57,175],[40,127,251],[50,190,255],[106,235,255],[138,236,174],
+                  [205,255,162],[240,236,121],[255,189,87],[255,161,68],[255,186,133],
+                  [255,255,255]]),
+  topo:     even([[70,50,140],[40,95,200],[80,175,225],[170,215,240],[240,248,252],
+                  [225,235,160],[230,195,130],[230,165,140],[245,205,215],[255,255,255]]),
+  hot:      sampleFn(t => [cl(t/0.375)*255, cl((t-0.375)/0.375)*255, cl((t-0.75)/0.25)*255], 21),
+  cool:     even([[0,255,255],[255,0,255]]),
+  wysiwyg:  even([[64,0,192],[0,0,255],[0,128,255],[0,255,255],[0,224,128],[0,192,0],
+                  [128,224,0],[255,255,0],[255,192,0],[255,128,0],[255,0,0],[255,0,192]]),
+  globe:    even([[15,0,120],[40,0,160],[20,10,240],[0,120,255],[0,205,240],[130,215,190],
+                  [95,165,80],[170,200,100],[215,185,120],[225,195,165],[240,225,220],
+                  [255,255,255]]),
+  gebco:    even([[0,175,215],[70,200,230],[120,220,240],[165,232,246],[200,242,250],
+                  [228,250,255]]),
+  copper:   sampleFn(t => [cl(t*1.25)*255, t*0.7812*255, t*0.4975*255], 17),
+  split:    even([[0,0,85],[0,0,255],[130,170,255],[255,255,255],[255,170,130],
+                  [255,0,0],[85,0,0]]),
+  viridis:  even(VIRIDIS),
+  rdbu:     even(RDBU_R)
+};
+const PAL_ORDER = ['rainbow','relief','gray','no_green','red2green','seis','jet','ocean',
+                   'sealand','polar','haxby','topo','hot','cool','wysiwyg','globe','gebco',
+                   'copper','split','viridis','rdbu'];
+const UNIFORM = new Set(['gray','viridis','rdbu']);
+
+function makeCmap(anchors){
+  const last = anchors[anchors.length-1];
+  return t => {
+    t = cl(t);
+    if (t <= anchors[0][0]) return anchors[0].slice(1);
+    if (t >= last[0]) return last.slice(1);
+    let i = 0;
+    while (i < anchors.length - 2 && anchors[i+1][0] < t) i++;
+    const a = anchors[i], b = anchors[i+1];
+    const f = b[0] > a[0] ? (t - a[0])/(b[0] - a[0]) : 0;
+    return [a[1]+(b[1]-a[1])*f, a[2]+(b[2]-a[2])*f, a[3]+(b[3]-a[3])*f];
+  };
+}
+function cssRamp(anchors){
+  return 'linear-gradient(to right,' + anchors.map(a =>
+    `rgb(${a[1]|0},${a[2]|0},${a[3]|0}) ${(a[0]*100).toFixed(2)}%`).join(',') + ')';
+}
+/* a trailing _r means reverse, so "jet_r" and "seis_r" just work */
+function anchorsFor(name){
+  const rev = typeof name === 'string' && name.endsWith('_r');
+  const base = PALETTES[rev ? name.slice(0, -2) : name];
+  if (!base) return null;
+  return rev ? base.map(a => [1 - a[0], a[1], a[2], a[3]]).reverse() : base;
+}
+function cmapFor(name){ return makeCmap(anchorsFor(name) || PALETTES.jet); }
+/* so a colour map can still be looked up by name, as the drawing code does */
+const CMAPS = new Proxy({}, {
+  get: (_t, k) => (typeof k === 'string' && anchorsFor(k)) ? cmapFor(k) : undefined
+});
+
+/* --- GMT .cpt files ---------------------------------------------------- */
+function parseCPT(text, name){
+  const stops = [];
+  let hsvModel = false;
+  for (const raw of text.split(/\r?\n/)){
+    const line = raw.trim();
+    if (!line) continue;
+    if (line[0] === '#'){
+      if (/COLOR_MODEL\s*=\s*\+?HSV/i.test(line)) hsvModel = true;
+      continue;
+    }
+    if (/^[BFN]\b/i.test(line)) continue;          // background / foreground / NaN rows
+    const p = line.split(/[\s\t]+/).filter(s => s !== '');
+    const n = s => Number(s);
+    let z0, c0, z1, c1;
+    if (p.length >= 8 && p.slice(0, 8).every(s => isFinite(n(s)))){
+      z0 = n(p[0]); c0 = [n(p[1]), n(p[2]), n(p[3])];
+      z1 = n(p[4]); c1 = [n(p[5]), n(p[6]), n(p[7])];
+    } else if (p.length >= 4 && p[1].indexOf('/') > 0 && p[3].indexOf('/') > 0){
+      z0 = n(p[0]); c0 = p[1].split('/').map(n);
+      z1 = n(p[2]); c1 = p[3].split('/').map(n);
+    } else continue;
+    if (![z0, z1].every(isFinite) || c0.length < 3 || c1.length < 3) continue;
+    if (!c0.every(isFinite) || !c1.every(isFinite)) continue;
+    if (hsvModel){ c0 = hsv2rgb(c0[0], c0[1]/(c0[1] > 1 ? 100 : 1), c0[2]/(c0[2] > 1 ? 100 : 1));
+                   c1 = hsv2rgb(c1[0], c1[1]/(c1[1] > 1 ? 100 : 1), c1[2]/(c1[2] > 1 ? 100 : 1)); }
+    stops.push([z0, c0], [z1, c1]);
+  }
+  if (stops.length < 2)
+    throw new Error(`${name}: no usable colour rows — expected GMT CPT lines like ` +
+                    `"z0 r g b z1 r g b" or "z0 r/g/b z1 r/g/b".`);
+  const zmin = stops[0][0], zmax = stops[stops.length-1][0];
+  if (!(zmax > zmin))
+    throw new Error(`${name}: the z column does not increase, so the palette has no range.`);
+  return stops.map(([z, c]) => [(z - zmin)/(zmax - zmin), c[0], c[1], c[2]]);
+}
+const INK='#101828', INK2='#475467', INK3='#98a2b3', GRID='#e4e7ec';
+const CA='#2f6fd0', CB='#d9730d';
+
+/* --------------------------------------------------------- plot helpers */
+function niceTicks(lo, hi, n){
+  if (!(hi > lo)) return [lo];
+  const raw = (hi-lo)/n, mag = Math.pow(10, Math.floor(Math.log10(raw))), q = raw/mag;
+  const step = (q<1.5?1:q<3?2:q<7?5:10)*mag, out = [];
+  for (let v = Math.ceil(lo/step)*step; v <= hi + step*1e-9; v += step) out.push(+v.toFixed(10));
+  return out;
+}
+function axes(ctx, b, xlo, xhi, ylo, yhi, xlab, ylab, gridlines){
+  if (gridlines){
+    ctx.strokeStyle = GRID; ctx.lineWidth = 1;
+    for (const t of niceTicks(xlo,xhi,5)){
+      const x = Math.round(b.x + (t-xlo)/(xhi-xlo)*b.w) + .5;
+      ctx.beginPath(); ctx.moveTo(x,b.y); ctx.lineTo(x,b.y+b.h); ctx.stroke();
+    }
+    for (const t of niceTicks(ylo,yhi,4)){
+      const y = Math.round(b.y + b.h - (t-ylo)/(yhi-ylo)*b.h) + .5;
+      ctx.beginPath(); ctx.moveTo(b.x,y); ctx.lineTo(b.x+b.w,y); ctx.stroke();
+    }
+  }
+  ctx.strokeStyle = '#98a2b3'; ctx.lineWidth = 1;
+  ctx.strokeRect(b.x+.5, b.y+.5, b.w, b.h);
+  ctx.fillStyle = INK2; ctx.font = '11px ui-monospace,Consolas,monospace';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (const t of niceTicks(xlo,xhi,5)){
+    const x = b.x + (t-xlo)/(xhi-xlo)*b.w;
+    ctx.beginPath(); ctx.moveTo(x,b.y+b.h); ctx.lineTo(x,b.y+b.h+4); ctx.stroke();
+    ctx.fillText(String(t), x, b.y+b.h+6);
+  }
+  ctx.textAlign='right'; ctx.textBaseline='middle';
+  for (const t of niceTicks(ylo,yhi,4)){
+    const y = b.y + b.h - (t-ylo)/(yhi-ylo)*b.h;
+    ctx.beginPath(); ctx.moveTo(b.x,y); ctx.lineTo(b.x-4,y); ctx.stroke();
+    ctx.fillText(String(t), b.x-6, y);
+  }
+  ctx.fillStyle = INK3; ctx.font = '11px ui-sans-serif,sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='top';
+  ctx.fillText(xlab, b.x+b.w/2, b.y+b.h+22);
+  ctx.save(); ctx.translate(b.x-36, b.y+b.h/2); ctx.rotate(-Math.PI/2);
+  ctx.textBaseline='bottom'; ctx.fillText(ylab, 0, 0); ctx.restore();
+}
+function ptitle(ctx, x, y, w, text){
+  ctx.fillStyle = INK; ctx.font = '600 12.5px ui-sans-serif,system-ui,sans-serif';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillText(text, x + 46, y);
+}
+function colourbar(ctx, x, y, w, h, vmin, vmax, cmap, label){
+  for (let i=0;i<h;i++){ ctx.fillStyle = rgb(cmap(1 - i/(h-1))); ctx.fillRect(x, y+i, w, 1); }
+  ctx.strokeStyle = '#98a2b3'; ctx.lineWidth = 1; ctx.strokeRect(x+.5, y+.5, w, h);
+  ctx.fillStyle = INK2; ctx.font = '10.5px ui-monospace,Consolas,monospace';
+  ctx.textAlign='left'; ctx.textBaseline='middle';
+  for (const t of niceTicks(vmin, vmax, 4)){
+    const yy = y + h - (t-vmin)/(vmax-vmin)*h;
+    ctx.beginPath(); ctx.moveTo(x+w, yy); ctx.lineTo(x+w+3, yy); ctx.stroke();
+    ctx.fillText(String(t), x+w+5, yy);
+  }
+  if (label){
+    ctx.save(); ctx.translate(x+w+42, y+h/2); ctx.rotate(-Math.PI/2);
+    ctx.fillStyle = INK3; ctx.font='10.5px ui-sans-serif,sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='bottom'; ctx.fillText(label,0,0); ctx.restore();
+  }
+}
+function mapPanel(ctx, px, py, pw, ph, d, cfg){
+  const b = {x:px+46, y:py+22, w:pw-46-64, h:ph-22-34};
+  ptitle(ctx, px, py, pw, cfg.title);
+  const {lonMin,lonMax,latMin,latMax,dlon,dlat,cmap} = cfg;
+  let {vmin, vmax} = cfg;
+  if (!isFinite(vmin) || !isFinite(vmax) || vmax <= vmin){ vmin = 0; vmax = 1; }
+  const sx = b.w/(lonMax-lonMin), sy = b.h/(latMax-latMin);
+  const cw = Math.max(1, dlon*sx+.8), chh = Math.max(1, dlat*sy+.8);
+  ctx.save(); ctx.beginPath(); ctx.rect(b.x,b.y,b.w,b.h); ctx.clip();
+  const span = vmax - vmin;
+  for (let i=0;i<d.lon.length;i++){
+    ctx.fillStyle = rgb(cmap((d.val[i]-vmin)/span));
+    ctx.fillRect(b.x+(d.lon[i]-lonMin)*sx-cw/2, b.y+b.h-(d.lat[i]-latMin)*sy-chh/2, cw, chh);
+  }
+  ctx.restore();
+  axes(ctx, b, lonMin, lonMax, latMin, latMax, 'longitude', 'latitude', false);
+  colourbar(ctx, b.x+b.w+13, b.y, 12, b.h, vmin, vmax, cmap, cfg.cblabel||'');
+  return b;
+}
+
+/* ------------------------------------------------------------ app state */
+const S = {A:null, B:null, merged:null, od:null, seam:null, ov:null,
+           L:1, cA:null, cB:null, auto:true, timer:null, lastMs:0};
+const $ = id => document.getElementById(id);
+function say(t, cls){
+  const s = document.createElement('span');
+  if (cls) s.className = cls;
+  s.textContent = t + '\n';
+  $('log').appendChild(s); $('log').scrollTop = $('log').scrollHeight;
+}
+const num = id => parseFloat($(id).value);
+const centres = () => [[num('ax'), num('ay')], [num('bx'), num('by')]];
+const bothIn = () => !!(S.A && S.B);
+function centresOK(){
+  return bothIn() && [num('ax'),num('ay'),num('bx'),num('by')].every(isFinite);
+}
+
+/* --------------------------------------------------------- file loading */
+function statTable(d){
+  const rows = [['nodes', d.lon.length],
+                ['lon', `${minOf(d.lon).toFixed(2)} … ${maxOf(d.lon).toFixed(2)}`],
+                ['lat', `${minOf(d.lat).toFixed(2)} … ${maxOf(d.lat).toFixed(2)}`],
+                ['value', `${minOf(d.vel).toFixed(3)} … ${maxOf(d.vel).toFixed(3)}`],
+                ['spacing', `${spacing(d.lon).toFixed(3)} × ${spacing(d.lat).toFixed(3)}`]];
+  return '<table>' + rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('') + '</table>';
+}
+function paintSlot(which){
+  const d = S[which], up = which;
+  $('fn'+up).textContent = d ? d.name : 'drop a file here, or click to browse';
+  $('st'+up).innerHTML = d ? statTable(d) : '';
+  $('slot'+up).classList.toggle('set', !!d);
+}
+function centroid(d){
+  let x = 0, y = 0;
+  for (let i=0;i<d.lon.length;i++){ x += d.lon[i]; y += d.lat[i]; }
+  return [x/d.lon.length, y/d.lat.length];
+}
+async function loadFiles(which, files){
+  const list = Array.from(files).slice(0, 2);
+  try {
+    const parsed = [];
+    for (const f of list) parsed.push(parseXYZ(await f.text(), f.name));
+    if (parsed.length === 2){
+      // two at once: A is whichever sits further along the dominant axis
+      const c0 = centroid(parsed[0]), c1 = centroid(parsed[1]);
+      const flip = Math.abs(c1[0]-c0[0]) >= Math.abs(c1[1]-c0[1]) ? c0[0] > c1[0] : c0[1] > c1[1];
+      S.A = flip ? parsed[1] : parsed[0];
+      S.B = flip ? parsed[0] : parsed[1];
+      paintSlot('A'); paintSlot('B');
+      say(`loaded ${S.A.name} → A and ${S.B.name} → B`);
+    } else {
+      S[which] = parsed[0]; paintSlot(which);
+      say(`loaded ${parsed[0].name} → ${which} (${parsed[0].lon.length} nodes)`);
+    }
+    clearErr();
+    if (bothIn()) initialiseFromData();
+  } catch (err){ showErr(err.message); }
+}
+function showErr(msg){
+  const n = $('loadNote'); n.textContent = msg;
+  n.className = 'verdict bad'; say('! ' + msg, 'e');
+}
+function clearErr(){ $('loadNote').className = 'verdict warn hidden'; }
+
+/* Defaults chosen from the data, then everything downstream runs itself. */
+function initialiseFromData(){
+  const ca = centroid(S.A), cb = centroid(S.B);
+  const eastWest = Math.abs(cb[0]-ca[0]) >= Math.abs(cb[1]-ca[1]);
+  // Keep the blend axis exactly along the dominant direction unless the split
+  // is genuinely diagonal: a hair of tilt would rotate the whole hand-over.
+  const diagonal = Math.min(Math.abs(cb[0]-ca[0]), Math.abs(cb[1]-ca[1])) >
+                   0.25*Math.max(Math.abs(cb[0]-ca[0]), Math.abs(cb[1]-ca[1]));
+  let A = ca.slice(), B = cb.slice();
+  if (!diagonal){
+    if (eastWest){ const y = 0.5*(ca[1]+cb[1]); A[1] = y; B[1] = y; }
+    else         { const x = 0.5*(ca[0]+cb[0]); A[0] = x; B[0] = x; }
+  }
+  $('ax').value = +A[0].toFixed(2); $('ay').value = +A[1].toFixed(2);
+  $('bx').value = +B[0].toFixed(2); $('by').value = +B[1].toFixed(2);
+  $('cardTune').classList.remove('off');
+  $('cardResult').classList.remove('off');
+  autoTolerance();
+  autoScale();
+  recommend();
+}
+
+/* If nothing matches at the current tolerance but the maps do overlap, the two
+   grids are simply offset - the single most common way this kind of merge
+   fails silently.  Suggest a tolerance that would actually pair them up. */
+function autoTolerance(){
+  if (!centresOK()) return;
+  const [cA, cB] = centres();
+  const [lo, hi] = overlapSpan(S.A, S.B);
+  if (!(hi > lo)) return;                       // genuinely disjoint: nothing wrong
+
+  const al = alignment(S.A, S.B);
+  const expected = Math.round(al.fClose * S.A.lon.length);
+  const matched = overlapProjection(S.A, S.B, cA, cB).n;
+  if (expected === 0){
+    if (matched === 0){
+      $('loadNote').className = 'verdict bad';
+      $('loadNote').textContent =
+        `These maps cover the same ground but sit on different grids — the nearest ` +
+        `node of one is about ${al.gapMedian === null ? '?' : al.gapMedian.toFixed(3)}° ` +
+        `from the other, against a node spacing of ${al.step}°. Nothing can be blended ` +
+        `and the output would step where they meet. Regrid one map onto the other; ` +
+        `widening the tolerance would just pretend different nodes are the same point.`;
+      say(`! incompatible grids (nearest-node gap ` +
+          `${al.gapMedian === null ? '?' : al.gapMedian.toFixed(4)}°, spacing ${al.step}°)`, 'e');
+    }
+    return;
+  }
+  if (matched >= 0.98*expected) return;          // lining up as it should
+
+  // Coincident nodes exist but most of them are not being paired: the two files
+  // print the same grid to different precision.  Clear the tolerance past the
+  // worst pair, but never past half a node spacing.
+  const cand = +Math.min(al.gapMax*1.05, 0.49*al.step).toPrecision(3);
+  if (cand > MATCH_SNAP){
+    setMatchTol(cand); $('tol').value = cand;
+    const now = overlapProjection(S.A, S.B, cA, cB).n;
+    $('loadNote').className = 'verdict warn';
+    $('loadNote').textContent =
+      `The two files print the same grid to different precision — nodes sit up to ` +
+      `${al.gapMax.toExponential(1)}° apart, so only ${matched} of about ${expected} ` +
+      `pairs matched at the default tolerance. Widened it to ${cand}° and ${now} now ` +
+      `match. That is far inside the ${al.step}° node spacing, so these really are ` +
+      `the same points.`;
+    say(`grids agree to ~${al.gapMax.toExponential(1)}°; tolerance widened to ` +
+        `${cand}° (${matched} → ${now} shared nodes)`, 'd');
+  } else {
+    $('loadNote').className = 'verdict bad';
+    $('loadNote').textContent =
+      `Only ${matched} of about ${expected} coincident nodes are pairing up, and the ` +
+      `tolerance cannot be widened without reaching past half the ${al.step}° node ` +
+      `spacing. The overlap will come out patchy — check the two grids match.`;
+    say(`! partial node matching: ${matched} of ~${expected}`, 'e');
+  }
+}
+
+/* -------------------------------------------------------------- L control */
+function recommend(){
+  if (!centresOK()) return;
+  const [cA, cB] = centres();
+  const {tLo, tHi, n} = overlapProjection(S.A, S.B, cA, cB);
+  if (!n){ refresh(); return; }
+  const Ls = suggestLProj(cA, cB, tLo, tHi);
+  if (Ls === null){
+    say('! the midpoint between the two centres lies outside the overlap; ' +
+        'no L keeps both edges clean — move the centres', 'e');
+    refresh(); return;
+  }
+  $('Lslide').max = Math.max(2.5*Ls, 0.5).toFixed(2);
+  setL(Math.floor(Ls*100)/100, true);        // floor, never round past the limit
+}
+function setL(v, rerun){
+  S.L = v;
+  if (v > +$('Lslide').max) $('Lslide').max = (v*1.2).toFixed(2);
+  if (v < +$('Lslide').min) $('Lslide').min = Math.max(0.001, v*0.8).toFixed(3);
+  $('Lslide').value = v; $('Lbox').value = +v.toFixed(2);
+  refresh(rerun !== false);
+}
+
+/* ---------------------------------------------------------------- refresh */
+function refresh(rerun){
+  if (!centresOK()) return;
+  const [cA, cB] = centres();
+  S.cA = cA; S.cB = cB;
+  const {tLo, tHi, n} = overlapProjection(S.A, S.B, cA, cB);
+  const f = frame(cA, cB), s = handoverScale(S.L, cA, cB);
+  const Ls = n ? suggestLProj(cA, cB, tLo, tHi) : null;
+
+  const bearing = (Math.atan2(f.ux, f.uy)*180/Math.PI + 360) % 360;
+  const axis = f.D === 0 ? 'undefined (centres coincide)'
+             : Math.abs(f.uy) < 1e-9 ? 'east–west'
+             : Math.abs(f.ux) < 1e-9 ? 'north–south'
+             : `diagonal, bearing ${bearing.toFixed(0)}°`;
+  $('axisHint').textContent = `${n} shared nodes · blend axis ${axis} · centres ${f.D.toFixed(2)}° apart`;
+
+  const q = edgeQuality(S.L, cA, cB, tLo, tHi);
+  const v = $('verdict');
+  if (q.verdict === 'none'){
+    v.className = 'verdict warn';
+    v.textContent = n ? 'The two centres coincide, so every shared node is a plain 50/50 average.'
+                      : 'No shared nodes — the maps will simply be concatenated.';
+  } else if (q.verdict === 'ok'){
+    v.className = 'verdict ok';
+    v.textContent = `Edges clean: the blend is ${(q.wA*100).toFixed(0)}% map A where the overlap ` +
+      `starts and ${(q.wB*100).toFixed(0)}% map B where it ends, so the merged map does not ` +
+      `step where the overlap runs out.`;
+  } else {
+    v.className = 'verdict bad';
+    v.textContent = `Too smooth for this overlap: only ${(q.wA*100).toFixed(0)}% map A at the near ` +
+      `edge and ${(q.wB*100).toFixed(0)}% map B at the far edge, so the merged map will step where ` +
+      `the overlap ends.` + (Ls ? ` Press Recommend, or set L ≤ ${Ls.toFixed(2)}.` : '');
+  }
+
+  $('kv').innerHTML =
+    `hand-over scale <b>s = L²/(2·${f.D.toFixed(2)}) = ${s.toFixed(3)}°</b> ` +
+    `&nbsp;·&nbsp; 10–90% width <b>${(4.394*s).toFixed(2)}°</b>` +
+    (n ? ` &nbsp;·&nbsp; overlap spans <b>${(tHi-tLo).toFixed(2)}°</b> along the blend axis` : '');
+
+  // safe band on the slider
+  const smin = +$('Lslide').min, smax = +$('Lslide').max;
+  const pct = x => Math.max(0, Math.min(100, (x - smin)/(smax - smin)*100));
+  $('meter').firstElementChild.style.width = (Ls ? pct(Ls) : 0) + '%';
+  $('meter').lastElementChild.style.left = pct(S.L) + '%';
+  $('mlo').textContent = `L = ${smin}`;
+  $('mmid').textContent = Ls ? `clean up to L = ${Ls.toFixed(2)}` : '';
+  $('mhi').textContent = `L = ${smax}`;
+
+  drawKernel(tLo, tHi, cA, cB);
+  chips();
+  if (rerun !== false) scheduleMerge();
+}
+
+function chips(){
+  const c = [];
+  const push = (k, v, cls) => c.push(`<div class="chip ${cls||''}"><b>${k}</b><span>${v}</span></div>`);
+  if (S.merged){
+    push('nodes out', S.merged.lon.length);
+    push('blended', S.od.idx.length);
+    if (S.od.idx.length){
+      const st = stats(S.od.diff);
+      push('A vs B rms', st.rms.toFixed(3));
+      const worst = Math.max(S.seam.rmsW, S.seam.rmsE);
+      push('seam rms', worst.toFixed(4), worst <= 0.5*st.rms ? 'good' : 'bad');
+    }
+  }
+  $('chips').innerHTML = c.join('');
+}
+
+/* ------------------------------------------------------------ kernel plot */
+function drawKernel(tLo, tHi, cA, cB){
+  const c = $('kernel'), ctx = c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+  const f = frame(cA, cB);
+  let lo = Infinity, hi = -Infinity;
+  for (const d of [S.A, S.B]) for (let i=0;i<d.lon.length;i+=7){
+    const t = (d.lon[i]-f.mx)*f.ux + (d.lat[i]-f.my)*f.uy;
+    if (t<lo) lo=t; if (t>hi) hi=t;
+  }
+  if (!(hi>lo)){ lo=-1; hi=1; }
+  const b = {x:58, y:14, w:c.width-58-20, h:c.height-14-52};
+  if (tLo !== null){
+    ctx.fillStyle = 'rgba(47,111,208,.09)';
+    ctx.fillRect(b.x+(tLo-lo)/(hi-lo)*b.w, b.y, (tHi-tLo)/(hi-lo)*b.w, b.h);
+  }
+  ctx.setLineDash([5,4]); ctx.strokeStyle = '#cfd4dc'; ctx.lineWidth = 1;
+  for (const y of [EDGE_TOL, 1-EDGE_TOL]){
+    const yy = b.y + b.h - y*b.h;
+    ctx.beginPath(); ctx.moveTo(b.x,yy); ctx.lineTo(b.x+b.w,yy); ctx.stroke();
+  }
+  ctx.setLineDash([2,3]);
+  for (const [t0, col] of [[-f.D/2, CA],[f.D/2, CB]]){
+    const x = b.x + (t0-lo)/(hi-lo)*b.w;
+    ctx.strokeStyle = col; ctx.beginPath(); ctx.moveTo(x,b.y); ctx.lineTo(x,b.y+b.h); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  const s = handoverScale(S.L, cA, cB);
+  for (const [isA, col] of [[1,CA],[0,CB]]){
+    ctx.strokeStyle = col; ctx.lineWidth = 2.4; ctx.beginPath();
+    for (let i=0;i<=700;i++){
+      const t = lo + (hi-lo)*i/700, w = 1/(1+Math.exp(Math.max(-700,Math.min(700,t/s))));
+      const x = b.x + i/700*b.w, y = b.y + b.h - (isA ? w : 1-w)*b.h;
+      i ? ctx.lineTo(x,y) : ctx.moveTo(x,y);
+    }
+    ctx.stroke();
+  }
+  axes(ctx, b, lo, hi, 0, 1, 'distance along blend axis (° from midpoint)', 'weight', true);
+  ctx.font = '12px ui-sans-serif,sans-serif'; ctx.textAlign='left'; ctx.textBaseline='top';
+  ctx.fillStyle = CA; ctx.fillText('■ map A', b.x+9, b.y+7);
+  ctx.fillStyle = CB; ctx.fillText('■ map B', b.x+72, b.y+7);
+}
+
+/* ---------------------------------------------------------------- merging */
+function scheduleMerge(){
+  if (!S.auto) return;
+  clearTimeout(S.timer);
+  S.timer = setTimeout(runMerge, 130);
+}
+function runMerge(){
+  if (!centresOK()) return;
+  const [cA, cB] = centres();
+  const t0 = performance.now();
+  try {
+    const m = gaussianMerge(S.A, S.B, S.L, cA, cB);
+    const od = overlapDiff(S.A, S.B, m);
+    S.merged = m; S.od = od; S.seam = seamReport(m, od, cA, cB);
+    S.lastMs = performance.now() - t0;
+    if (m.dupW || m.dupE)
+      say(`! duplicate nodes inside one file (A ${m.dupW}, B ${m.dupE}); first kept`, 'e');
+    setProfileRange(cA, cB);
+    drawQC();
+    $('dlXYZ').disabled = $('dlPNG').disabled = $('dlDiag').disabled = false;
+    const nA = m.src.filter(s=>s==='W').length, nB = m.src.filter(s=>s==='E').length;
+    $('resHint').textContent =
+      `${m.lon.length} nodes · ${nA} A-only · ${nB} B-only · ${od.idx.length} blended · ` +
+      `${S.lastMs.toFixed(0)} ms`;
+    chips();
+    // A grid big enough to make live re-merging sluggish switches to manual.
+    if (S.auto && S.lastMs > 400){
+      S.auto = false; $('go').classList.add('primary');
+      say(`grids are large (${S.lastMs.toFixed(0)} ms per merge) — switched to manual: ` +
+          `press Merge after changing a setting`, 'd');
+    }
+  } catch (err){ showErr(err.message); }
+}
+function report(){
+  const m = S.merged, od = S.od;
+  if (!m) return;
+  const nA = m.src.filter(s=>s==='W').length, nB = m.src.filter(s=>s==='E').length;
+  say(`\nL = ${S.L.toFixed(2)}°, centres [${S.cA}] / [${S.cB}]`);
+  say(`${m.lon.length} nodes: ${nA} A-only, ${nB} B-only, ${od.idx.length} blended`);
+  if (od.idx.length){
+    const st = stats(od.diff), s = S.seam;
+    say(`disagreement B−A over the overlap: mean ${st.mean>=0?'+':''}${st.mean.toFixed(4)}` +
+        `  rms ${st.rms.toFixed(4)}  range ${st.min.toFixed(4)} … ${st.max>=0?'+':''}${st.max.toFixed(4)}`);
+    say(`residual step at the overlap edges: near rms ${s.rmsW.toFixed(4)} (max ${s.maxW.toFixed(4)})` +
+        `   far rms ${s.rmsE.toFixed(4)} (max ${s.maxE.toFixed(4)})`);
+  }
+}
+
+/* ------------------------------------------------------------- QC figure */
+function setProfileRange(cA, cB){
+  let m = 0;
+  for (let i=0;i<S.merged.lon.length;i+=3)
+    m = Math.max(m, Math.abs(perpendicular(S.merged.lon[i], S.merged.lat[i], cA, cB)));
+  const r = +(m*0.9).toFixed(2);
+  $('poff').min = -r; $('poff').max = r;
+  $('poff').step = Math.max(0.01, +(r/100).toFixed(3));
+  if (Math.abs(+$('poff').value) > r) $('poff').value = 0;
+}
+function drawQC(){
+  const c = $('qc'), ctx = c.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0,0,c.width,c.height);
+  const m = S.merged, od = S.od, A = S.A, B = S.B, cA = S.cA, cB = S.cB;
+  const lonMin = Math.min(minOf(A.lon), minOf(B.lon)) - .15;
+  const lonMax = Math.max(maxOf(A.lon), maxOf(B.lon)) + .15;
+  const latMin = Math.min(minOf(A.lat), minOf(B.lat)) - .15;
+  const latMax = Math.max(maxOf(A.lat), maxOf(B.lat)) + .15;
+  // spacing() collapses to the snap size on jittered coordinates, which would
+  // draw every cell one pixel wide; floor it against the real node pitch.
+  const pitch = nodePitch(m);
+  const dlon = Math.max(spacing(m.lon), 0.3*pitch);
+  const dlat = Math.max(spacing(m.lat), 0.3*pitch);
+  let vmin = num('vmin'), vmax = num('vmax');
+  if (!isFinite(vmin) || !isFinite(vmax) || vmax <= vmin){
+    vmin = Math.min(minOf(A.vel), minOf(B.vel)); vmax = Math.max(maxOf(A.vel), maxOf(B.vel));
+  }
+  const cmap = CMAPS[$('cmap').value] || CMAPS.jet_r;
+  const base = {lonMin,lonMax,latMin,latMax,dlon,dlat,vmin,vmax,cmap};
+  const PW = 440, PH = 306, X = [30, 500, 970], Y1 = 30, Y2 = 376;
+
+  mapPanel(ctx, X[0], Y1, PW, PH, {lon:A.lon,lat:A.lat,val:A.vel}, {...base, title:'Map A', cblabel:'value'});
+  mapPanel(ctx, X[1], Y1, PW, PH, {lon:B.lon,lat:B.lat,val:B.vel}, {...base, title:'Map B', cblabel:'value'});
+  mapPanel(ctx, X[2], Y1, PW, PH, {lon:m.lon,lat:m.lat,val:m.vel}, {...base, title:'Merged', cblabel:'value'});
+  mapPanel(ctx, X[0], Y2, PW, PH, {lon:m.lon,lat:m.lat,val:m.wW},
+           {...base, vmin:0, vmax:1, cmap:t=>ramp(COOLWARM_R,t),
+            title:'weight given to map A', cblabel:'w_A'});
+
+  if (od.idx.length){
+    const dl = od.idx.map(i=>m.lon[i]), da = od.idx.map(i=>m.lat[i]);
+    let a = 0; for (const v of od.diff) a = Math.max(a, Math.abs(v));
+    if (!(a > 0)) a = 1;
+    mapPanel(ctx, X[1], Y2, PW, PH, {lon:dl, lat:da, val:od.diff},
+             {...base, vmin:-a, vmax:a, cmap:t=>ramp(RDBU_R,t),
+              title:'where A and B disagree  (B − A)', cblabel:'B − A'});
+  } else {
+    ptitle(ctx, X[1], Y2, PW, 'where A and B disagree');
+    ctx.fillStyle = INK3; ctx.font = '13px ui-sans-serif,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('no shared nodes', X[1]+PW/2, Y2+PH/2);
+  }
+  kernelPanel(ctx, X[2], Y2, PW, PH);
+  profilePanel(ctx, 30, 722, 1380, 260);
+}
+function kernelPanel(ctx, px, py, pw, ph){
+  const b = {x:px+46, y:py+22, w:pw-46-64, h:ph-22-34};
+  const f = frame(S.cA, S.cB), s = handoverScale(S.L, S.cA, S.cB);
+  const {tLo, tHi} = overlapProjection(S.A, S.B, S.cA, S.cB);
+  let lo = Infinity, hi = -Infinity;
+  for (let i=0;i<S.merged.lon.length;i+=3){
+    const t = (S.merged.lon[i]-f.mx)*f.ux + (S.merged.lat[i]-f.my)*f.uy;
+    if (t<lo) lo=t; if (t>hi) hi=t;
+  }
+  if (!(hi>lo)){ lo=-1; hi=1; }
+  ptitle(ctx, px, py, pw, `blending kernel · L = ${S.L.toFixed(2)}°, s = ${s.toFixed(2)}°`);
+  if (tLo !== null){
+    ctx.fillStyle = 'rgba(47,111,208,.09)';
+    ctx.fillRect(b.x+(tLo-lo)/(hi-lo)*b.w, b.y, (tHi-tLo)/(hi-lo)*b.w, b.h);
+  }
+  ctx.setLineDash([5,4]); ctx.strokeStyle = '#cfd4dc';
+  for (const y of [EDGE_TOL, 1-EDGE_TOL]){
+    const yy = b.y+b.h-y*b.h;
+    ctx.beginPath(); ctx.moveTo(b.x,yy); ctx.lineTo(b.x+b.w,yy); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  for (const [isA,col] of [[1,CA],[0,CB]]){
+    ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath();
+    for (let i=0;i<=500;i++){
+      const t = lo+(hi-lo)*i/500, w = 1/(1+Math.exp(Math.max(-700,Math.min(700,t/s))));
+      const x = b.x+i/500*b.w, y = b.y+b.h-(isA?w:1-w)*b.h;
+      i ? ctx.lineTo(x,y) : ctx.moveTo(x,y);
+    }
+    ctx.stroke();
+  }
+  axes(ctx, b, lo, hi, 0, 1, 'distance along blend axis (°)', 'normalised weight', true);
+  ctx.font='11px ui-sans-serif,sans-serif'; ctx.textAlign='left'; ctx.textBaseline='top';
+  ctx.fillStyle=CA; ctx.fillText('■ A', b.x+7, b.y+6);
+  ctx.fillStyle=CB; ctx.fillText('■ B', b.x+42, b.y+6);
+}
+function bandProfile(d, off, band){
+  const f = frame(S.cA, S.cB), out = [];
+  for (let i=0;i<d.lon.length;i++){
+    const n = -(d.lon[i]-f.mx)*f.uy + (d.lat[i]-f.my)*f.ux;
+    if (Math.abs(n - off) > band) continue;
+    out.push([(d.lon[i]-f.mx)*f.ux + (d.lat[i]-f.my)*f.uy, d.vel[i]]);
+  }
+  out.sort((a,b)=>a[0]-b[0]);
+  return out;
+}
+function profilePanel(ctx, px, py, pw, ph){
+  const m = S.merged, off = num('poff') || 0;
+  const band = 0.6*Math.max(spacing(m.lon), spacing(m.lat));
+  const rows = [['map A', bandProfile(S.A, off, band), CA, 1.4, true],
+                ['map B', bandProfile(S.B, off, band), CB, 1.4, true],
+                ['merged', bandProfile(m, off, band), INK, 2.4, false]];
+  let lo = Infinity, hi = -Infinity, vlo = Infinity, vhi = -Infinity;
+  for (const [, r] of rows) for (const [t, v] of r){
+    if (t<lo) lo=t; if (t>hi) hi=t; if (v<vlo) vlo=v; if (v>vhi) vhi=v;
+  }
+  if (!(hi>lo)){ lo=-1; hi=1; }
+  if (!(vhi>vlo)){ vlo-=0.5; vhi+=0.5; }
+  const pad = (vhi-vlo)*0.08; vlo-=pad; vhi+=pad;
+  const b = {x:px+52, y:py+24, w:pw-52-24, h:ph-24-36};
+  const {tLo, tHi} = overlapProjection(S.A, S.B, S.cA, S.cB);
+  ptitle(ctx, px, py, pw,
+    `profile along the blend axis, ${off.toFixed(2)}° off the centre line ` +
+    `(shaded = overlap — look for steps at its edges)`);
+  if (tLo !== null){
+    ctx.fillStyle = 'rgba(47,111,208,.09)';
+    ctx.fillRect(b.x+(tLo-lo)/(hi-lo)*b.w, b.y, (tHi-tLo)/(hi-lo)*b.w, b.h);
+    ctx.strokeStyle = 'rgba(16,24,40,.35)'; ctx.lineWidth = 1;
+    for (const e of [tLo,tHi]){
+      const x = b.x+(e-lo)/(hi-lo)*b.w;
+      ctx.beginPath(); ctx.moveTo(x,b.y); ctx.lineTo(x,b.y+b.h); ctx.stroke();
+    }
+  }
+  ctx.save(); ctx.beginPath(); ctx.rect(b.x,b.y,b.w,b.h); ctx.clip();
+  for (const [, r, col, lw, dash] of rows){
+    if (!r.length) continue;
+    ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.setLineDash(dash?[6,4]:[]);
+    ctx.beginPath();
+    r.forEach(([t,v],i) => {
+      const x = b.x+(t-lo)/(hi-lo)*b.w, y = b.y+b.h-(v-vlo)/(vhi-vlo)*b.h;
+      i ? ctx.lineTo(x,y) : ctx.moveTo(x,y);
+    });
+    ctx.stroke();
+  }
+  ctx.setLineDash([]); ctx.restore();
+  axes(ctx, b, lo, hi, vlo, vhi, 'distance along blend axis (° from midpoint)', 'value', true);
+  ctx.font='12px ui-sans-serif,sans-serif'; ctx.textAlign='left'; ctx.textBaseline='top';
+  let lx = b.x+10;
+  for (const [name,,col] of rows){
+    ctx.fillStyle = col; ctx.fillText('■ '+name, lx, b.y+7); lx += 76;
+  }
+}
+
+/* ------------------------------------------------------------- downloads */
+function download(blob, name){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800);
+}
+function autoScale(){
+  if (!bothIn()) return;
+  $('vmin').value = +Math.min(minOf(S.A.vel), minOf(S.B.vel)).toFixed(3);
+  $('vmax').value = +Math.max(maxOf(S.A.vel), maxOf(S.B.vel)).toFixed(3);
+}
+
+/* --------------------------------------------------------- palette picker */
+function paletteName(){ return $('cmap').value || 'jet_r'; }
+function setPalette(base, rev){
+  const name = base + (rev ? '_r' : '');
+  if (!anchorsFor(name)) return;
+  $('cmap').value = name;
+  $('palRev').checked = !!rev;
+  $('palName').textContent = base + (rev ? ' (reversed)' : '');
+  $('palBar').style.background = cssRamp(anchorsFor(name));
+  for (const el of $('palGrid').children)
+    if (el.dataset) el.classList.toggle('on', el.dataset.pal === base);
+  if (S.merged) drawQC();
+}
+function buildPaletteGrid(){
+  const g = $('palGrid');
+  g.innerHTML = '';
+  const names = PAL_ORDER.filter(n => PALETTES[n]);
+  for (const n of Object.keys(PALETTES)) if (!names.includes(n)) names.push(n);
+  for (const n of names){
+    const d = document.createElement('div');
+    d.className = 'sw';
+    d.dataset.pal = n;
+    d.title = UNIFORM.has(n) ? `${n} — perceptually uniform`
+            : `${n} — GMT-style reproduction; load the .cpt for exact colours`;
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    bar.style.background = cssRamp(anchorsFor(n));
+    const tick = document.createElement('div'); tick.className = 'tick';
+    const nm = document.createElement('div'); nm.className = 'nm';
+    nm.textContent = n + (UNIFORM.has(n) ? ' ✓' : '');
+    d.appendChild(bar); d.appendChild(tick); d.appendChild(nm);
+    d.addEventListener('click', () => setPalette(n, $('palRev').checked));
+    g.appendChild(d);
+    const o = document.createElement('option'); o.value = n; $('cmap').appendChild(o);
+    const o2 = document.createElement('option'); o2.value = n + '_r'; $('cmap').appendChild(o2);
+  }
+  const note = document.createElement('p');
+  note.className = 'palnote';
+  note.innerHTML = '✓ marks the perceptually uniform maps — equal steps in value look ' +
+    'like equal steps in colour. The GMT-style entries are close reproductions; for ' +
+    'colours that must match a published figure exactly, load the real <b>.cpt</b>.';
+  g.appendChild(note);
+}
+async function loadCPT(file){
+  try {
+    const anchors = parseCPT(await file.text(), file.name);
+    const key = file.name.replace(/\.cpt$/i, '');
+    PALETTES[key] = anchors;
+    buildPaletteGrid();
+    setPalette(key, false);
+    $('palGrid').classList.remove('hidden');
+    say(`loaded palette ${file.name} (${anchors.length} colour stops)`, 'g');
+    clearErr();
+  } catch (err){ showErr(err.message); }
+}
+
+/* ----------------------------------------------------------------- wiring */
+let pickFor = 'A';
+for (const which of ['A','B']){
+  const el = $('slot'+which);
+  el.addEventListener('click', e => {
+    if (e.target.classList.contains('x')) return;
+    pickFor = which; $('filePick').click();
+  });
+  el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('hot'); });
+  el.addEventListener('dragleave', () => el.classList.remove('hot'));
+  el.addEventListener('drop', e => {
+    e.preventDefault(); el.classList.remove('hot');
+    if (e.dataTransfer.files.length) loadFiles(which, e.dataTransfer.files);
+  });
+}
+$('filePick').addEventListener('change', e => {
+  if (e.target.files.length) loadFiles(pickFor, e.target.files);
+  e.target.value = '';
+});
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  if (e.dataTransfer.files.length) loadFiles(S.A ? 'B' : 'A', e.dataTransfer.files);
+});
+$('swap').addEventListener('click', () => {
+  if (!bothIn()) return;
+  [S.A, S.B] = [S.B, S.A];
+  paintSlot('A'); paintSlot('B');
+  say('swapped A and B');
+  initialiseFromData();
+});
+$('Lslide').addEventListener('input', e => setL(+e.target.value));
+$('Lbox').addEventListener('change', e => {
+  const v = parseFloat(e.target.value);
+  if (!isFinite(v) || v <= 0){ showErr('L must be greater than zero.'); $('Lbox').value = +S.L.toFixed(2); return; }
+  clearErr(); setL(v);
+});
+$('rec').addEventListener('click', recommend);
+for (const id of ['ax','ay','bx','by']) $(id).addEventListener('input', () => refresh());
+$('tol').addEventListener('change', e => {
+  const v = parseFloat(e.target.value);
+  if (!(v > 0)){ showErr('match tolerance must be greater than zero'); return; }
+  clearErr(); setMatchTol(v);
+  say(`match tolerance set to ${v}°`, 'd');
+  recommend();
+});
+$('tolAuto').addEventListener('click', () => { setMatchTol(1e-4); $('tol').value = 1e-4; autoTolerance(); recommend(); });
+$('edgeTol').addEventListener('change', e => {
+  const v = parseFloat(e.target.value);
+  if (!(v > 0) || v >= 0.5){ showErr('edge purity target must be between 0 and 0.5'); return; }
+  clearErr(); setEdgeTol(v); recommend();
+});
+$('autoScale').addEventListener('click', () => { autoScale(); if (S.merged) drawQC(); });
+for (const id of ['vmin','vmax','cmap']) $(id).addEventListener('change', () => { if (S.merged) drawQC(); });
+$('palPick').addEventListener('click', () => $('palGrid').classList.toggle('hidden'));
+$('palRev').addEventListener('change', e => {
+  const base = paletteName().replace(/_r$/, '');
+  setPalette(base, e.target.checked);
+});
+$('cptBtn').addEventListener('click', () => $('cptPick').click());
+$('cptPick').addEventListener('change', e => {
+  if (e.target.files.length) loadCPT(e.target.files[0]);
+  e.target.value = '';
+});
+$('poff').addEventListener('input', () => { if (S.merged) drawQC(); });
+$('go').addEventListener('click', () => { runMerge(); report(); });
+$('dlXYZ').addEventListener('click', () => download(new Blob([formatXYZ(S.merged)],{type:'text/plain'}), 'merged.xyz'));
+$('dlDiag').addEventListener('click', () => download(new Blob([formatDiag(S.merged)],{type:'text/plain'}), 'merged_diag.txt'));
+$('dlPNG').addEventListener('click', () => $('qc').toBlob(b => download(b,'merged_qc.png'), 'image/png'));
+buildPaletteGrid();
+setPalette('jet', true);
+</script>
+</body>
+</html>
