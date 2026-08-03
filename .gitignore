@@ -16,6 +16,21 @@ tests/awk_reference.d
 # Remove this line once the paper is submitted or posted as a preprint.
 paper/
 
+# --- third-party publications -------------------------------------------------
+# Papers downloaded for reference. These are the publishers' copyright; pushing
+# them to a public repository is redistribution. Keep them locally, not here.
+*.pdf
+
+# --- personal documents -------------------------------------------------------
+*CV*.docx
+*Resume*.docx
+~$*
+
+# --- source images ------------------------------------------------------------
+# The two QC figures shown in the "About this software" panel. They are already
+# embedded in merge_tomo.html as base64, so the originals need not be tracked.
+image-*.png
+
 # --- generated output ---------------------------------------------------------
 tests/checkerboard/
 tests/resolution/

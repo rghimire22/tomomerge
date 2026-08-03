@@ -54,7 +54,14 @@ import numpy as np
 # round-trip unchanged.
 KEY_DECIMALS = 4
 
-EDGE_TOL = 0.10   # target: overlap edges are >=90 % the map that continues on
+EDGE_TOL = 0.01   # overlap edges must be >=99 % the map that continues on
+
+# 0.01, not the 0.10 that looks natural.  With p = 0.10 the blend is only 90 %
+# pure where the overlap ends, and on all three real map pairs tested that
+# leaves a step LARGER than the maps' own node-to-node roughness - a seam a
+# reader can see.  p = 0.01 puts the admissible L near the value that minimises
+# the introduced step, and holds the step at or below the intrinsic roughness.
+# See seam_free_range() for the test that decides this without a true model.
 
 
 # ----------------------------------------------------------------------------
@@ -195,6 +202,60 @@ def suggest_L(cW, cE, ov_lo, ov_hi, p=EDGE_TOL):
     """Longitude-interval form of suggest_L_proj, for the east/west case."""
     m = 0.5 * (_centre(cW)[0] + _centre(cE)[0])
     return suggest_L_proj(cW, cE, ov_lo - m, ov_hi - m, p)
+
+
+def roughness(lon, lat, vel, cA=None, cB=None, lo=None, hi=None, pct=95.0):
+    """
+    Largest node-to-node change along the blend axis, as a percentile.
+
+    Computed on a map's own interior this is its INTRINSIC roughness: how much
+    a well-resolved map already changes from one node to the next.  Computed on
+    a merged map across the hand-over it is the step the merge INTRODUCED.  The
+    merge is seam-free, in the only sense that can be checked without a true
+    model, when the second does not exceed the first.
+    """
+    lon = np.asarray(lon, float); lat = np.asarray(lat, float)
+    vel = np.asarray(vel, float)
+    out = []
+    for c in np.unique(np.round(lat, 4)):
+        m = np.abs(lat - c) < 1e-6
+        if m.sum() < 3:
+            continue
+        o = np.argsort(lon[m])
+        xs, vs = lon[m][o], vel[m][o]
+        k = np.ones(len(xs) - 1, bool)
+        if lo is not None:
+            k &= (xs[:-1] >= lo) & (xs[:-1] <= hi)
+        if k.any():
+            out.append(np.abs(np.diff(vs))[k].max())
+    return float(np.percentile(out, pct)) if out else 0.0
+
+
+def seam_free_range(west, east, cA, cB, t_lo, t_hi, span=1.4, n=41):
+    """
+    The range of L for which the merge introduces no step larger than the input
+    maps' own roughness, and the L that minimises the introduced step.
+
+    This is the practical test: it needs no true model, only the two maps, and
+    it answers the question a reader actually asks of a merged map - can I see
+    where the join is?
+    """
+    intrinsic = max(roughness(*west), roughness(*east))
+    lo = 0.5*(_centre(cA)[0] + _centre(cB)[0]) + t_lo - span
+    hi = 0.5*(_centre(cA)[0] + _centre(cB)[0]) + t_hi + span
+    Ls = np.linspace(0.5, 2.2*float(np.sqrt(2*project(0., 0., cA, cB)[1]
+                                            * min(-t_lo, t_hi)/np.log(99.0))), n)
+    steps = []
+    for L in Ls:
+        lon, lat, vel, _, _ = gaussian_merge(west, east, L, cA, cB)
+        steps.append(roughness(lon, lat, vel, lo=lo, hi=hi))
+    steps = np.asarray(steps)
+    ok = Ls[steps <= intrinsic]
+    return dict(intrinsic=intrinsic, L=Ls, step=steps,
+                L_best=float(Ls[int(np.argmin(steps))]),
+                step_best=float(steps.min()),
+                L_min=float(ok.min()) if len(ok) else None,
+                L_max=float(ok.max()) if len(ok) else None)
 
 
 def _spacing(a):
@@ -784,6 +845,20 @@ def main():
             elif not Lsug:
                 print(f"    the centres are placed badly relative to the "
                       f"overlap - revisit --cw/--ce")
+
+    if n_match and sep > 0:
+        sf = seam_free_range(west, east, cA, cB, t_lo, t_hi)
+        print(f"\n  seam test (needs no true model): the input maps change by up to "
+              f"{sf['intrinsic']:.4f} between")
+        print(f"  adjacent nodes, so a merge that introduces less than that adds "
+              f"nothing a reader can see.")
+        if sf["L_min"] is not None:
+            print(f"    L = {sf['L_min']:.2f} .. {sf['L_max']:.2f} deg introduces no "
+                  f"visible step; the minimum is {sf['step_best']:.4f} at "
+                  f"L = {sf['L_best']:.2f} deg")
+        else:
+            print(f"    ! no L keeps the introduced step below {sf['intrinsic']:.4f}; "
+                  f"the two maps may disagree too strongly to blend")
 
     out = a.out or ask("Output file", default="merged.xyz")
 

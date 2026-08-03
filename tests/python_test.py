@@ -59,10 +59,15 @@ check("scalar centres == [lon,lat] centres on a shared latitude",
       np.array_equal(mt.west_weight(lon, 4.52, -119., -110.),
                      mt.blend_weight(lon, 43.5, 4.52, (-119., 43.5), (-110., 43.5))))
 Ls = mt.suggest_L_proj((-119., 43.), (-110., 43.), -2.5, 2.5)
-check("suggested L puts the overlap edges exactly on 90/10",
-      abs(float(mt.blend_weight(-117., 43., Ls, (-119., 43.), (-110., 43.))) - 0.9) < 1e-12
-      and abs(float(mt.blend_weight(-112., 43., Ls, (-119., 43.), (-110., 43.))) - 0.1) < 1e-12,
-      f"L = {Ls:.6f}")
+check("suggested L puts the overlap edges exactly on the purity target",
+      abs(float(mt.blend_weight(-117., 43., Ls, (-119., 43.), (-110., 43.)))
+          - (1 - mt.EDGE_TOL)) < 1e-12
+      and abs(float(mt.blend_weight(-112., 43., Ls, (-119., 43.), (-110., 43.)))
+              - mt.EDGE_TOL) < 1e-12,
+      f"p = {mt.EDGE_TOL}, L = {Ls:.6f}")
+check("the default purity target is the strict one",
+      abs(mt.EDGE_TOL - 0.01) < 1e-12,
+      "p = 0.10 leaves a step larger than the maps' own roughness on real data")
 check("no L is offered when the midpoint is outside the overlap",
       mt.suggest_L_proj(-119., -110., 1.0, 5.0) is None)
 
@@ -121,6 +126,29 @@ lo2 = mt.gaussian_merge(d, (np.array([-200.]), np.array([0.]), np.array([1.])),
                         1.0, -115., -114.)[0]
 check("a repeated node is kept once, first occurrence winning", len(lo2) == 3,
       f"{len(lo2)} rows out")
+
+# --------------------------------------------------------------------------
+print("\n--- the seam test (no true model needed) ---")
+r_w = mt.roughness(*west); r_e = mt.roughness(*east)
+check("intrinsic roughness is measurable on each input map",
+      0 < r_w < 1 and 0 < r_e < 1, f"west {r_w:.4f}, east {r_e:.4f} km/s per node")
+tl, th, _ = mt.overlap_projection(west, east, (-119., 43.5), (-110., 43.5))
+sf = mt.seam_free_range(west, east, (-119., 43.5), (-110., 43.5), tl, th)
+check("a seam-free range of L exists for the real pair",
+      sf["L_min"] is not None and sf["L_max"] > sf["L_min"],
+      f"L = {sf['L_min']:.2f} .. {sf['L_max']:.2f} deg")
+Lc = mt.suggest_L_proj((-119., 43.5), (-110., 43.5), tl, th)
+check("the criterion at p = 0.01 lands inside the seam-free range",
+      sf["L_min"] <= Lc <= sf["L_max"],
+      f"L* = {Lc:.2f} in [{sf['L_min']:.2f}, {sf['L_max']:.2f}]")
+Lold = mt.suggest_L_proj((-119., 43.5), (-110., 43.5), tl, th, p=0.10)
+check("the old p = 0.10 target falls outside it, which is why it was changed",
+      not (sf["L_min"] <= Lold <= sf["L_max"]),
+      f"L*(p=0.10) = {Lold:.2f} introduces a step above the intrinsic "
+      f"{sf['intrinsic']:.4f}")
+check("2.5-3.0 deg, checked independently by eye, is inside the seam-free range",
+      sf["L_min"] <= 2.5 and 3.0 <= sf["L_max"],
+      f"range {sf['L_min']:.2f} .. {sf['L_max']:.2f} deg")
 
 # --------------------------------------------------------------------------
 print("\n--- levelling ---")

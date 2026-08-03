@@ -145,9 +145,14 @@ check('overlap measured from shared nodes', op.n === 7701 &&
 const Ls = ctxv.suggestLProj(-119, -110, op.tLo, op.tHi);
 check('suggested L agrees with Python to 1e-12',
       Math.abs(Ls - REF.suggestL) < 1e-12, `js ${Ls.toFixed(9)}  py ${REF.suggestL.toFixed(9)}`);
-check('edges land exactly on the 90/10 target at that L',
-      Math.abs(ctxv.westWeight(-117, Ls, -119, -110) - 0.9) < 1e-12 &&
-      Math.abs(ctxv.westWeight(-112, Ls, -119, -110) - 0.1) < 1e-12);
+{
+  const p = vm.runInContext('EDGE_TOL', ctxv);
+  check('the browser build uses the strict purity target', Math.abs(p - 0.01) < 1e-12,
+        `p = ${p}; 0.10 leaves a step larger than the maps' own roughness`);
+  check('edges land exactly on the purity target at that L',
+        Math.abs(ctxv.westWeight(-117, Ls, -119, -110) - (1 - p)) < 1e-12 &&
+        Math.abs(ctxv.westWeight(-112, Ls, -119, -110) - p) < 1e-12);
+}
 check('midpoint outside the overlap -> null', ctxv.suggestLProj(-119, -110, 1, 5) === null);
 check('weights stay finite and in [0,1] for L from 1e-6 to 1e6',
       [1e-6,1e-3,1,1e3,1e6].every(L => [-200,-119,-114.5,-110,-50].every(x => {
@@ -256,8 +261,11 @@ drawCalls = 0; badCoord = null;
 ctxv.runMerge();
 check('merge + full QC render completes', drawCalls > 20000, `${drawCalls} canvas ops`);
 check('no non-finite canvas coordinate', badCoord === null, badCoord || '');
-check('app result matches the standalone merge',
-      ctxv.formatXYZ(S.merged) === ctxv.formatXYZ(m));
+// compare at the L the app actually chose, not at a value hard-coded here
+check('app result matches a standalone merge at the same L',
+      ctxv.formatXYZ(S.merged) ===
+      ctxv.formatXYZ(ctxv.gaussianMerge(A, B, S.L, [-119, 43.5], [-110, 43.5])),
+      `app L = ${S.L}`);
 check('downloads enabled', $('dlXYZ').disabled === false && $('dlPNG').disabled === false &&
       $('dlDiag').disabled === false);
 console.log('\n--- colour palettes ---');

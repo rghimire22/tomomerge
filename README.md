@@ -141,6 +141,10 @@ python tests/resolution_test.py     # the scientific validation  (~2 min)
 python tests/checkerboard_test.py   # fast interactive explorer   (~10 s)
 ```
 
+**Start with `VERIFICATION_GUIDE.md`** — a step-by-step protocol that runs each
+test, states the number you should see, and explains what it would mean if you
+saw something else.
+
 **Which test to trust for what.** `resolution_test.py` is the validation: it
 computes synthetic travel times through a checkerboard along real inter-station
 paths, adds noise, and recovers each subarray by damped, smoothed least squares,
